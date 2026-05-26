@@ -26,6 +26,20 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .kpi.green .kpi-val{color:var(--green);}
 .kpi.red .kpi-val{color:var(--red);}
 .kpi.muted .kpi-val{color:var(--muted);}
+.kpi.clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.kpi.clickable:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.1);}
+.kpi.clickable.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.15);background:#f0f5ff;}
+.filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:none;}
+.filter-panel.on{display:block;}
+.filter-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.filter-title{font-size:15px;font-weight:700;}
+.filter-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:0 2px;}
+.filter-close:hover{color:var(--text);}
+.filter-csm-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;}
+.filter-csm-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .12s;}
+.filter-csm-card:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,124,255,.1);}
+.filter-csm-name{font-size:12px;font-weight:700;flex:1;}
+.filter-csm-count{font-size:20px;font-weight:700;}
 .section-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;}
 .section-block{margin-bottom:20px;}
 .csm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
@@ -102,9 +116,17 @@ table.tix tr:hover td{background:var(--surface);}
   <div class="banner" id="banner"></div>
   <div class="kpi-row">
     <div class="kpi"><div class="kpi-label">Matched Tickets</div><div class="kpi-val" id="kTotal">—</div></div>
-    <div class="kpi green"><div class="kpi-label">Open</div><div class="kpi-val" id="kOpen">—</div></div>
+    <div class="kpi green clickable" id="kpiOpen" onclick="openFilter('open')"><div class="kpi-label">Open ↗</div><div class="kpi-val" id="kOpen">—</div></div>
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
-    <div class="kpi red"><div class="kpi-label">Priority</div><div class="kpi-val" id="kPriority">—</div></div>
+    <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div></div>
+  </div>
+
+  <div class="filter-panel" id="filterPanel">
+    <div class="filter-head">
+      <div class="filter-title" id="filterTitle"></div>
+      <button class="filter-close" onclick="closeFilter()">×</button>
+    </div>
+    <div class="filter-csm-list" id="filterCsmList"></div>
   </div>
 
   <div class="csm-sections" id="csmSections">
@@ -121,7 +143,7 @@ table.tix tr:hover td{background:var(--surface);}
     <div class="tix-panel" id="tixPanel">
       <div class="tix-head"><div class="tix-title" id="tixTitle"></div><button class="back-btn" onclick="closeTix()">← back</button></div>
       <table class="tix">
-        <thead><tr><th>ID</th><th>Author</th><th>Opened</th><th>Status</th><th>Topic / Description</th></tr></thead>
+        <thead><tr><th>ID</th><th>Author</th><th>Opened</th><th>Status</th><th>Type</th><th>Topic / Description</th></tr></thead>
         <tbody id="tixBody"></tbody>
       </table>
     </div>
@@ -167,6 +189,7 @@ const SECTIONS = [
 
 let ALL_TICKETS = [];
 let activeCsm = null;
+let activeFilter = null;
 
 // ── PERIOD SELECTOR ──────────────────────────────────────────────────────────
 function buildPeriods(dataGenAt) {
@@ -338,7 +361,7 @@ function openTix(account, tix) {
     const desc = t.ai_title || t.subject || t.body.slice(0, 120) || '(no description)';
     const isPri = t.priority === 'priority';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name ? `<div style="font-size:12px">${t.author_name}</div>` : ''}<div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri ? '<span class="pdot"></span>' : ''}<span class="sbadge ${t.state}">${t.state}</span></td><td class="tdesc">${desc}</td>`;
+    tr.innerHTML = `<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name ? `<div style="font-size:12px">${t.author_name}</div>` : ''}<div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri ? '<span class="pdot"></span>' : ''}<span class="sbadge ${t.state}">${t.state}</span></td><td style="white-space:nowrap;color:var(--muted);font-size:11px">${t.ticket_type || '—'}</td><td class="tdesc">${desc}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('tixPanel').classList.add('on');
@@ -349,8 +372,54 @@ function closeTix() {
   document.querySelectorAll('.acc-card').forEach(c => c.classList.remove('active'));
 }
 
+// ── FILTER PANEL (Open / Priority KPI click) ──────────────────────────────────
+function openFilter(type) {
+  const p = getSelectedPeriod();
+  const periodTix = ALL_TICKETS.filter(t => t.created_at >= p.start && t.created_at <= p.end);
+  const tix = type === 'open'
+    ? periodTix.filter(t => t.state === 'open')
+    : periodTix.filter(t => t.priority === 'priority');
+
+  activeFilter = type;
+  const color = type === 'open' ? 'var(--green)' : 'var(--red)';
+  const label = type === 'open' ? 'Open' : 'Priority';
+  document.getElementById('filterTitle').textContent = label + ' Tickets — ' + tix.length + ' total';
+
+  // Group by CSM in SECTIONS order
+  const byCsm = {};
+  for (const t of tix) (byCsm[t.csm] = byCsm[t.csm] || []).push(t);
+
+  const list = document.getElementById('filterCsmList');
+  list.innerHTML = '';
+  const allSectionCsms = SECTIONS.flatMap(s => s.csms);
+  for (const csm of allSectionCsms) {
+    const ts = byCsm[csm];
+    if (!ts || ts.length === 0) continue;
+    const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280', short: csm};
+    const card = document.createElement('div');
+    card.className = 'filter-csm-card';
+    card.innerHTML = `<div class="avatar" style="background:${meta.color};width:30px;height:30px;font-size:11px;flex-shrink:0">${meta.initials}</div><div class="filter-csm-name">${meta.short}</div><div class="filter-csm-count" style="color:${color}">${ts.length}</div>`;
+    card.addEventListener('click', () => { closeFilter(); openCsm(csm, ts); });
+    list.appendChild(card);
+  }
+
+  document.querySelectorAll('.kpi.clickable').forEach(k => k.classList.remove('active'));
+  document.getElementById(type === 'open' ? 'kpiOpen' : 'kpiPriority').classList.add('active');
+
+  const fp = document.getElementById('filterPanel');
+  fp.classList.add('on');
+  fp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+
+function closeFilter() {
+  activeFilter = null;
+  document.getElementById('filterPanel').classList.remove('on');
+  document.querySelectorAll('.kpi.clickable').forEach(k => k.classList.remove('active'));
+}
+
 function onPeriodChange() {
   activeCsm = null;
+  closeFilter();
   document.getElementById('detailPanel').classList.remove('on');
   const p = getSelectedPeriod();
   const filtered = ALL_TICKETS.filter(t => t.created_at >= p.start && t.created_at <= p.end);
