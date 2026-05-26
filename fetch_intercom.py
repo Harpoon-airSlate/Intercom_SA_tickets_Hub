@@ -95,11 +95,13 @@ while True:
             state = "submitted"
 
         ca = c.get("custom_attributes") or {}
+        ticket_type_name = (ticket.get("ticket_type") or {}).get("name", "")
         matched.append({
             "id": c["id"],
             "created_at": ts,
             "state": state,
             "priority": c.get("priority", "not_priority"),
+            "ticket_type": ticket_type_name,
             "body": strip_html((c.get("source") or {}).get("body", "")),
             "subject": strip_html((c.get("source") or {}).get("subject", "")),
             "ai_title": ca.get("AI Title", ""),
