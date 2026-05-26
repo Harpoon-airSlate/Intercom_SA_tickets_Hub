@@ -95,7 +95,8 @@ while True:
             state = "submitted"
 
         ca = c.get("custom_attributes") or {}
-        ticket_type_name = (ticket.get("ticket_type") or {}).get("name", "")
+        _tt = ticket.get("ticket_type")
+        ticket_type_name = _tt.get("name", "") if isinstance(_tt, dict) else (_tt or "")
         matched.append({
             "id": c["id"],
             "created_at": ts,
