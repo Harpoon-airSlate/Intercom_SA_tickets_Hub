@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Assist · Intercom Tickets Hub</title>
+<style>
+:root{color-scheme:light;--bg:#ffffff;--surface:#f9f9fb;--surface2:#f3f3f7;--border:#e0e0e8;--accent:#4f7cff;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--text:#1f2937;--muted:#6b7280;--sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.brand{display:flex;flex-direction:column;gap:2px;}
+.badge{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
+.badge span{color:var(--accent);}
+.brand h1{font-size:18px;font-weight:700;}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.week-sel{appearance:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 30px 6px 11px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+.data-age{font-size:11px;color:var(--muted);}
+.main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+.banner{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:16px;display:none;}
+.banner.on{display:block;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+.kpi-val{font-size:30px;font-weight:700;}
+.kpi.green .kpi-val{color:var(--green);}
+.kpi.red .kpi-val{color:var(--red);}
+.kpi.muted .kpi-val{color:var(--muted);}
+.section-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;}
+.csm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:24px;}
+.csm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative;}
+.csm-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.1);}
+.csm-card.active{border-color:var(--accent);background:#f0f5ff;box-shadow:0 0 0 3px rgba(79,124,255,.12);}
+.csm-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.csm-name{font-size:13px;font-weight:700;line-height:1.2;}
+.csm-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.csm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;}
+.cst-val{font-size:18px;font-weight:700;}
+.cst-val.open{color:var(--green);}
+.cst-val.closed{color:var(--muted);}
+.cst-val.priority{color:var(--red);}
+.cst-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:1px;}
+.total-badge{position:absolute;top:12px;right:12px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;}
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:24px;display:none;}
+.detail-panel.on{display:block;}
+.detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.detail-title{font-size:16px;font-weight:700;}
+.detail-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;}
+.acc-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .12s;}
+.acc-card:hover,.acc-card.active{border-color:var(--accent);}
+.acc-card.active{background:#f0f5ff;}
+.acc-name{font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.acc-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.pill{font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;}
+.pill.open{background:#d1fae5;color:#065f46;}
+.pill.closed{background:var(--surface2);color:var(--muted);}
+.pill.priority{background:#fee2e2;color:#991b1b;}
+.tix-panel{display:none;margin-top:14px;}
+.tix-panel.on{display:block;}
+.tix-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.tix-title{font-size:14px;font-weight:700;}
+.back-btn{font-size:12px;color:var(--accent);cursor:pointer;background:none;border:none;text-decoration:underline;}
+table.tix{width:100%;border-collapse:collapse;font-size:12px;}
+table.tix th{background:var(--surface2);padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;}
+table.tix td{padding:9px 10px;border-bottom:1px solid var(--surface2);vertical-align:top;}
+table.tix tr:last-child td{border-bottom:none;}
+table.tix tr:hover td{background:var(--surface);}
+.sbadge{display:inline-block;font-size:10px;font-weight:600;border-radius:5px;padding:2px 7px;}
+.sbadge.open{background:#d1fae5;color:#065f46;}
+.sbadge.closed{background:var(--surface2);color:var(--muted);}
+.sbadge.snoozed{background:#fef3c7;color:#92400e;}
+.sbadge.submitted{background:#e0e7ff;color:#3730a3;}
+.pdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle;}
+.tid{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.tdesc{max-width:340px;line-height:1.4;}
+.temail{color:var(--muted);font-size:10px;}
+.tdate{white-space:nowrap;color:var(--muted);}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+.empty-icon{font-size:28px;margin-bottom:8px;}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);} .csm-grid{grid-template-columns:1fr;} .main{padding:14px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="badge">SUPPORT · <span>INTERCOM HUB</span></div>
+    <h1>Sales Assist · Intercom Tickets Hub</h1>
+  </div>
+  <div class="topbar-right">
+    <select class="week-sel" id="weekSel" onchange="onPeriodChange()"></select>
+    <span class="data-age" id="dataAge"></span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="banner" id="banner"></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Matched Tickets</div><div class="kpi-val" id="kTotal">—</div></div>
+    <div class="kpi green"><div class="kpi-label">Open</div><div class="kpi-val" id="kOpen">—</div></div>
+    <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
+    <div class="kpi red"><div class="kpi-label">Priority</div><div class="kpi-val" id="kPriority">—</div></div>
+  </div>
+  <div class="section-lbl">CSMs</div>
+  <div class="csm-grid" id="csmGrid"><div class="empty"><div class="empty-icon">⏳</div>Loading data…</div></div>
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-head">
+      <div class="avatar" id="dAvatar"></div>
+      <div><div class="detail-title" id="dName"></div><div class="detail-sub" id="dSub"></div></div>
+    </div>
+    <div class="section-lbl">Accounts</div>
+    <div class="acc-grid" id="accGrid"></div>
+    <div class="tix-panel" id="tixPanel">
+      <div class="tix-head"><div class="tix-title" id="tixTitle"></div><button class="back-btn" onclick="closeTix()">← back</button></div>
+      <table class="tix">
+        <thead><tr><th>ID</th><th>Author</th><th>Opened</th><th>Status</th><th>Topic / Description</th></tr></thead>
+        <tbody id="tixBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSM_META = {"Dexter Roy Rapsing Hermosura": {"short": "Dex", "initials": "DR", "color": "#4f7cff"}, "Lynne Pagtalunan": {"short": "Lynne", "initials": "LP", "color": "#8b5cf6"}, "Marco Francisco Ferrer": {"short": "Marco", "initials": "MF", "color": "#10b981"}, "Jayson Lubera": {"short": "Jayson", "initials": "JL", "color": "#f59e0b"}, "Russia Vasallo": {"short": "Russia", "initials": "RV", "color": "#ef4444"}, "Federico Mendez": {"short": "Federico", "initials": "FM", "color": "#06b6d4"}, "Kurt Daher": {"short": "Kurt", "initials": "KD", "color": "#f97316"}, "Rachel Kiara Fuellas": {"short": "Rachel", "initials": "RK", "color": "#ec4899"}, "Arti Harchekar": {"short": "Arti", "initials": "AH", "color": "#84cc16"}, "Keri Curkendall": {"short": "Keri", "initials": "KC", "color": "#14b8a6"}, "Karyna Kuznietsova": {"short": "Karyna", "initials": "KK", "color": "#a855f7"}};
+let ALL_TICKETS = [];
+let activeCsm = null;
+
+// ── PERIOD SELECTOR (based on data range, rolling 7-day windows) ──────────────
+function buildPeriods(dataGenAt) {
+  const anchor = dataGenAt ? new Date(dataGenAt*1000) : new Date();
+  anchor.setHours(23,59,59,999);
+  const periods = [];
+  for(let i=0;i<8;i++){
+    const end=new Date(anchor); end.setDate(anchor.getDate()-i*7); end.setHours(23,59,59,999);
+    const start=new Date(end); start.setDate(end.getDate()-6); start.setHours(0,0,0,0);
+    const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    periods.push({label:i===0?`Last 7 days (${fmt(start)}–${fmt(end)})`:fmt(start)+' – '+fmt(end),start:Math.floor(start.getTime()/1000),end:Math.floor(end.getTime()/1000)});
+  }
+  return periods;
+}
+let PERIODS=[];
+function buildSel(genAt){
+  PERIODS=buildPeriods(genAt);
+  const sel=document.getElementById('weekSel'); sel.innerHTML='';
+  PERIODS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.label;sel.appendChild(o);});
+}
+function getSelectedPeriod(){return PERIODS[parseInt(document.getElementById('weekSel').value)||0];}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function fmtTs(ts){if(!ts)return'—';return new Date(ts*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function setK(id,v){document.getElementById(id).textContent=v??'—';}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderHub(tix){
+  const open=tix.filter(t=>t.state==='open').length;
+  const closed=tix.filter(t=>['closed','submitted'].includes(t.state)).length;
+  const priority=tix.filter(t=>t.priority==='priority').length;
+  setK('kTotal',tix.length);setK('kOpen',open);setK('kClosed',closed);setK('kPriority',priority);
+  const byCsm={};
+  for(const t of tix)(byCsm[t.csm]=byCsm[t.csm]||[]).push(t);
+  const csms=Object.keys(byCsm).sort((a,b)=>byCsm[b].length-byCsm[a].length);
+  const grid=document.getElementById('csmGrid'); grid.innerHTML='';
+  if(!csms.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📭</div>No matched CSM tickets this period</div>';return;}
+  for(const csm of csms){
+    const meta=CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280',short:csm};
+    const ts=byCsm[csm];
+    const o=ts.filter(t=>t.state==='open').length;
+    const cl=ts.filter(t=>['closed','submitted'].includes(t.state)).length;
+    const pr=ts.filter(t=>t.priority==='priority').length;
+    const accs=new Set(ts.map(t=>t.account)).size;
+    const card=document.createElement('div');
+    card.className='csm-card'+(csm===activeCsm?' active':'');
+    card.dataset.csm=csm;
+    card.innerHTML=`<div class="total-badge">${ts.length}</div><div class="csm-head"><div class="avatar" style="background:${meta.color}">${meta.initials}</div><div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs!==1?'s':''}</div></div></div><div class="csm-stats"><div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div><div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div><div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div></div>`;
+    card.addEventListener('click',()=>openCsm(csm,byCsm[csm]));
+    grid.appendChild(card);
+  }
+  if(activeCsm&&byCsm[activeCsm])openCsm(activeCsm,byCsm[activeCsm],true);
+}
+
+function openCsm(csm,tix,silent=false){
+  activeCsm=csm;
+  document.querySelectorAll('.csm-card').forEach(c=>c.classList.toggle('active',c.dataset.csm===csm));
+  closeTix();
+  const meta=CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280'};
+  const o=tix.filter(t=>t.state==='open').length,cl=tix.filter(t=>['closed','submitted'].includes(t.state)).length;
+  document.getElementById('dAvatar').textContent=meta.initials;
+  document.getElementById('dAvatar').style.background=meta.color;
+  document.getElementById('dName').textContent=csm;
+  document.getElementById('dSub').textContent=tix.length+' tickets · '+o+' open · '+cl+' closed';
+  const byAcc={};
+  for(const t of tix)(byAcc[t.account]=byAcc[t.account]||[]).push(t);
+  const accs=Object.keys(byAcc).sort((a,b)=>{const ao=byAcc[a].filter(t=>t.state==='open').length,bo=byAcc[b].filter(t=>t.state==='open').length;return bo!==ao?bo-ao:byAcc[b].length-byAcc[a].length;});
+  const ag=document.getElementById('accGrid');ag.innerHTML='';
+  for(const acc of accs){
+    const ts=byAcc[acc];
+    const o=ts.filter(t=>t.state==='open').length,cl=ts.filter(t=>['closed','submitted'].includes(t.state)).length,pr=ts.filter(t=>t.priority==='priority').length;
+    const card=document.createElement('div');card.className='acc-card';
+    card.innerHTML=`<div class="acc-name" title="${acc}">${acc}</div><div class="acc-pills">${o?`<span class="pill open">${o} open</span>`:''}${cl?`<span class="pill closed">${cl} closed</span>`:''}${pr?`<span class="pill priority">${pr} ⚑</span>`:''}</div>`;
+    card.addEventListener('click',()=>openTix(acc,byAcc[acc]));
+    ag.appendChild(card);
+  }
+  const panel=document.getElementById('detailPanel');panel.classList.add('on');
+  if(!silent)panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function openTix(account,tix){
+  document.querySelectorAll('.acc-card').forEach(c=>c.classList.toggle('active',c.querySelector('.acc-name')?.title===account));
+  document.getElementById('tixTitle').textContent=account;
+  const sorted=[...tix].sort((a,b)=>{if(a.state==='open'&&b.state!=='open')return-1;if(b.state==='open'&&a.state!=='open')return 1;return b.created_at-a.created_at;});
+  const tbody=document.getElementById('tixBody');tbody.innerHTML='';
+  for(const t of sorted){
+    const desc=t.ai_title||t.subject||t.body.slice(0,120)||'(no description)';
+    const isPri=t.priority==='priority';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}  <div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri?'<span class="pdot"></span>':''}<span class="sbadge ${t.state}">${t.state}</span></td><td class="tdesc">${desc}</td>`;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('tixPanel').classList.add('on');
+}
+
+function closeTix(){
+  document.getElementById('tixPanel').classList.remove('on');
+  document.querySelectorAll('.acc-card').forEach(c=>c.classList.remove('active'));
+}
+
+function onPeriodChange(){
+  activeCsm=null;
+  document.getElementById('detailPanel').classList.remove('on');
+  const p=getSelectedPeriod();
+  const filtered=ALL_TICKETS.filter(t=>t.created_at>=p.start&&t.created_at<=p.end);
+  renderHub(filtered);
+}
+
+// ── LOAD data.json ────────────────────────────────────────────────────────────
+async function init(){
+  try{
+    const res=await fetch('./data.json?v='+Date.now());
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+
+    if(!data.total_matched){
+      const b=document.getElementById('banner');
+      b.textContent='⚠️  data.json is empty — run the GitHub Action first (Actions tab → Fetch Intercom Data Daily → Run workflow).';
+      b.classList.add('on');
+    }
+
+    ALL_TICKETS=data.tickets||[];
+    buildSel(data.generated_at);
+
+    const age=data.generated_date||'unknown';
+    document.getElementById('dataAge').textContent='Data: '+age;
+
+    onPeriodChange();
+  }catch(e){
+    document.getElementById('csmGrid').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: '+e.message+'</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
