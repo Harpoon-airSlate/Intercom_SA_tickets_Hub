@@ -27,7 +27,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .kpi.red .kpi-val{color:var(--red);}
 .kpi.muted .kpi-val{color:var(--muted);}
 .section-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;}
-.csm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:24px;}
+.section-block{margin-bottom:20px;}
+.csm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
 .csm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative;}
 .csm-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.1);}
 .csm-card.active{border-color:var(--accent);background:#f0f5ff;box-shadow:0 0 0 3px rgba(79,124,255,.12);}
@@ -51,6 +52,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .acc-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .12s;}
 .acc-card:hover,.acc-card.active{border-color:var(--accent);}
 .acc-card.active{background:#f0f5ff;}
+.acc-card.has-priority{border-left:3px solid var(--red);}
 .acc-name{font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .acc-pills{display:flex;gap:5px;flex-wrap:wrap;}
 .pill{font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;}
@@ -79,6 +81,7 @@ table.tix tr:hover td{background:var(--surface);}
 .tdate{white-space:nowrap;color:var(--muted);}
 .empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .empty-icon{font-size:28px;margin-bottom:8px;}
+.csm-sections{margin-bottom:24px;}
 @media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);} .csm-grid{grid-template-columns:1fr;} .main{padding:14px;}}
 </style>
 </head>
@@ -103,8 +106,11 @@ table.tix tr:hover td{background:var(--surface);}
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
     <div class="kpi red"><div class="kpi-label">Priority</div><div class="kpi-val" id="kPriority">—</div></div>
   </div>
-  <div class="section-lbl">CSMs</div>
-  <div class="csm-grid" id="csmGrid"><div class="empty"><div class="empty-icon">⏳</div>Loading data…</div></div>
+
+  <div class="csm-sections" id="csmSections">
+    <div class="empty"><div class="empty-icon">⏳</div>Loading data…</div>
+  </div>
+
   <div class="detail-panel" id="detailPanel">
     <div class="detail-head">
       <div class="avatar" id="dAvatar"></div>
@@ -123,139 +129,256 @@ table.tix tr:hover td{background:var(--surface);}
 </div>
 
 <script>
-const CSM_META = {"Dexter Roy Rapsing Hermosura": {"short": "Dex", "initials": "DR", "color": "#4f7cff"}, "Lynne Pagtalunan": {"short": "Lynne", "initials": "LP", "color": "#8b5cf6"}, "Marco Francisco Ferrer": {"short": "Marco", "initials": "MF", "color": "#10b981"}, "Jayson Lubera": {"short": "Jayson", "initials": "JL", "color": "#f59e0b"}, "Russia Vasallo": {"short": "Russia", "initials": "RV", "color": "#ef4444"}, "Federico Mendez": {"short": "Federico", "initials": "FM", "color": "#06b6d4"}, "Kurt Daher": {"short": "Kurt", "initials": "KD", "color": "#f97316"}, "Rachel Kiara Fuellas": {"short": "Rachel", "initials": "RK", "color": "#ec4899"}, "Arti Harchekar": {"short": "Arti", "initials": "AH", "color": "#84cc16"}, "Keri Curkendall": {"short": "Keri", "initials": "KC", "color": "#14b8a6"}, "Karyna Kuznietsova": {"short": "Karyna", "initials": "KK", "color": "#a855f7"}};
+const CSM_META = {
+  "Dexter Roy Rapsing Hermosura": {"short": "Dex",      "initials": "DR", "color": "#4f7cff"},
+  "Lynne Pagtalunan":             {"short": "Lynne",    "initials": "LP", "color": "#8b5cf6"},
+  "Marco Francisco Ferrer":       {"short": "Marco",    "initials": "MF", "color": "#10b981"},
+  "Jayson Lubera":                {"short": "Jayson",   "initials": "JL", "color": "#f59e0b"},
+  "Russia Vasallo":               {"short": "Russia",   "initials": "RV", "color": "#ef4444"},
+  "Federico Mendez":              {"short": "Federico", "initials": "FM", "color": "#06b6d4"},
+  "Kurt Daher":                   {"short": "Kurt",     "initials": "KD", "color": "#f97316"},
+  "Rachel Kiara Fuellas":         {"short": "Rachel",   "initials": "RK", "color": "#ec4899"},
+  "Arti Harchekar":               {"short": "Arti",     "initials": "AH", "color": "#84cc16"},
+  "Keri Curkendall":              {"short": "Keri",     "initials": "KC", "color": "#14b8a6"},
+  "Karyna Kuznietsova":           {"short": "Karyna",   "initials": "KK", "color": "#a855f7"}
+};
+
+// Define sections — order matters, only listed CSMs are shown
+const SECTIONS = [
+  {
+    label: "Customer Success Managers",
+    csms: [
+      "Jayson Lubera",
+      "Arti Harchekar",
+      "Russia Vasallo",
+      "Dexter Roy Rapsing Hermosura",
+      "Marco Francisco Ferrer",
+      "Lynne Pagtalunan"
+    ]
+  },
+  {
+    label: "Partner Associates",
+    csms: [
+      "Rachel Kiara Fuellas",
+      "Kurt Daher"
+    ]
+  }
+];
+
 let ALL_TICKETS = [];
 let activeCsm = null;
 
-// ── PERIOD SELECTOR (based on data range, rolling 7-day windows) ──────────────
+// ── PERIOD SELECTOR ──────────────────────────────────────────────────────────
 function buildPeriods(dataGenAt) {
-  const anchor = dataGenAt ? new Date(dataGenAt*1000) : new Date();
-  anchor.setHours(23,59,59,999);
+  const anchor = dataGenAt ? new Date(dataGenAt * 1000) : new Date();
+  anchor.setHours(23, 59, 59, 999);
   const periods = [];
-  for(let i=0;i<8;i++){
-    const end=new Date(anchor); end.setDate(anchor.getDate()-i*7); end.setHours(23,59,59,999);
-    const start=new Date(end); start.setDate(end.getDate()-6); start.setHours(0,0,0,0);
-    const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    periods.push({label:i===0?`Last 7 days (${fmt(start)}–${fmt(end)})`:fmt(start)+' – '+fmt(end),start:Math.floor(start.getTime()/1000),end:Math.floor(end.getTime()/1000)});
+  for (let i = 0; i < 8; i++) {
+    const end = new Date(anchor); end.setDate(anchor.getDate() - i * 7); end.setHours(23, 59, 59, 999);
+    const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0, 0, 0, 0);
+    const fmt = d => d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    periods.push({
+      label: i === 0 ? `Last 7 days (${fmt(start)}–${fmt(end)})` : fmt(start) + ' – ' + fmt(end),
+      start: Math.floor(start.getTime() / 1000),
+      end: Math.floor(end.getTime() / 1000)
+    });
   }
   return periods;
 }
-let PERIODS=[];
-function buildSel(genAt){
-  PERIODS=buildPeriods(genAt);
-  const sel=document.getElementById('weekSel'); sel.innerHTML='';
-  PERIODS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.label;sel.appendChild(o);});
+let PERIODS = [];
+function buildSel(genAt) {
+  PERIODS = buildPeriods(genAt);
+  const sel = document.getElementById('weekSel'); sel.innerHTML = '';
+  PERIODS.forEach((p, i) => {
+    const o = document.createElement('option'); o.value = i; o.textContent = p.label; sel.appendChild(o);
+  });
 }
-function getSelectedPeriod(){return PERIODS[parseInt(document.getElementById('weekSel').value)||0];}
+function getSelectedPeriod() { return PERIODS[parseInt(document.getElementById('weekSel').value) || 0]; }
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-function fmtTs(ts){if(!ts)return'—';return new Date(ts*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
-function setK(id,v){document.getElementById(id).textContent=v??'—';}
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function fmtTs(ts) { if (!ts) return '—'; return new Date(ts * 1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}); }
+function setK(id, v) { document.getElementById(id).textContent = v ?? '—'; }
 
-// ── RENDER ────────────────────────────────────────────────────────────────────
-function renderHub(tix){
-  const open=tix.filter(t=>t.state==='open').length;
-  const closed=tix.filter(t=>['closed','submitted'].includes(t.state)).length;
-  const priority=tix.filter(t=>t.priority==='priority').length;
-  setK('kTotal',tix.length);setK('kOpen',open);setK('kClosed',closed);setK('kPriority',priority);
-  const byCsm={};
-  for(const t of tix)(byCsm[t.csm]=byCsm[t.csm]||[]).push(t);
-  const csms=Object.keys(byCsm).sort((a,b)=>byCsm[b].length-byCsm[a].length);
-  const grid=document.getElementById('csmGrid'); grid.innerHTML='';
-  if(!csms.length){grid.innerHTML='<div class="empty"><div class="empty-icon">📭</div>No matched CSM tickets this period</div>';return;}
-  for(const csm of csms){
-    const meta=CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280',short:csm};
-    const ts=byCsm[csm];
-    const o=ts.filter(t=>t.state==='open').length;
-    const cl=ts.filter(t=>['closed','submitted'].includes(t.state)).length;
-    const pr=ts.filter(t=>t.priority==='priority').length;
-    const accs=new Set(ts.map(t=>t.account)).size;
-    const card=document.createElement('div');
-    card.className='csm-card'+(csm===activeCsm?' active':'');
-    card.dataset.csm=csm;
-    card.innerHTML=`<div class="total-badge">${ts.length}</div><div class="csm-head"><div class="avatar" style="background:${meta.color}">${meta.initials}</div><div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs!==1?'s':''}</div></div></div><div class="csm-stats"><div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div><div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div><div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div></div>`;
-    card.addEventListener('click',()=>openCsm(csm,byCsm[csm]));
-    grid.appendChild(card);
+// ── BUILD ONE CSM CARD ────────────────────────────────────────────────────────
+function buildCsmCard(csm, ts) {
+  const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280', short: csm};
+  const o = ts.filter(t => t.state === 'open').length;
+  const cl = ts.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+  const pr = ts.filter(t => t.priority === 'priority').length;
+  const accs = new Set(ts.map(t => t.account)).size;
+  const card = document.createElement('div');
+  card.className = 'csm-card' + (csm === activeCsm ? ' active' : '');
+  card.dataset.csm = csm;
+  card.innerHTML = `<div class="total-badge">${ts.length}</div><div class="csm-head"><div class="avatar" style="background:${meta.color}">${meta.initials}</div><div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs !== 1 ? 's' : ''}</div></div></div><div class="csm-stats"><div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div><div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div><div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div></div>`;
+  card.addEventListener('click', () => openCsm(csm, ts));
+  return card;
+}
+
+// ── RENDER HUB ────────────────────────────────────────────────────────────────
+function renderHub(tix) {
+  const open = tix.filter(t => t.state === 'open').length;
+  const closed = tix.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+  const priority = tix.filter(t => t.priority === 'priority').length;
+  setK('kTotal', tix.length); setK('kOpen', open); setK('kClosed', closed); setK('kPriority', priority);
+
+  // Build by-CSM index
+  const byCsm = {};
+  for (const t of tix) (byCsm[t.csm] = byCsm[t.csm] || []).push(t);
+
+  const container = document.getElementById('csmSections');
+  container.innerHTML = '';
+
+  let anyCards = false;
+
+  for (const section of SECTIONS) {
+    // Only render section if at least one CSM in it has data
+    const sectionCsms = section.csms.filter(csm => byCsm[csm] && byCsm[csm].length > 0);
+    // Always render section structure; show empty grid if no data
+    const block = document.createElement('div');
+    block.className = 'section-block';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'section-lbl';
+    lbl.textContent = section.label;
+    block.appendChild(lbl);
+
+    const grid = document.createElement('div');
+    grid.className = 'csm-grid';
+
+    // Render in defined order — skip CSMs with 0 tickets this period
+    for (const csm of section.csms) {
+      const ts = byCsm[csm];
+      if (!ts || ts.length === 0) continue;
+      grid.appendChild(buildCsmCard(csm, ts));
+      anyCards = true;
+    }
+
+    if (grid.children.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.style.padding = '20px';
+      empty.textContent = 'No tickets this period';
+      grid.appendChild(empty);
+    }
+
+    block.appendChild(grid);
+    container.appendChild(block);
   }
-  if(activeCsm&&byCsm[activeCsm])openCsm(activeCsm,byCsm[activeCsm],true);
+
+  if (!anyCards) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No matched CSM tickets this period</div>';
+  }
+
+  // Restore active CSM detail panel if previously selected
+  if (activeCsm && byCsm[activeCsm]) openCsm(activeCsm, byCsm[activeCsm], true);
 }
 
-function openCsm(csm,tix,silent=false){
-  activeCsm=csm;
-  document.querySelectorAll('.csm-card').forEach(c=>c.classList.toggle('active',c.dataset.csm===csm));
+// ── OPEN CSM DETAIL ───────────────────────────────────────────────────────────
+function openCsm(csm, tix, silent = false) {
+  activeCsm = csm;
+  document.querySelectorAll('.csm-card').forEach(c => c.classList.toggle('active', c.dataset.csm === csm));
   closeTix();
-  const meta=CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280'};
-  const o=tix.filter(t=>t.state==='open').length,cl=tix.filter(t=>['closed','submitted'].includes(t.state)).length;
-  document.getElementById('dAvatar').textContent=meta.initials;
-  document.getElementById('dAvatar').style.background=meta.color;
-  document.getElementById('dName').textContent=csm;
-  document.getElementById('dSub').textContent=tix.length+' tickets · '+o+' open · '+cl+' closed';
-  const byAcc={};
-  for(const t of tix)(byAcc[t.account]=byAcc[t.account]||[]).push(t);
-  const accs=Object.keys(byAcc).sort((a,b)=>{const ao=byAcc[a].filter(t=>t.state==='open').length,bo=byAcc[b].filter(t=>t.state==='open').length;return bo!==ao?bo-ao:byAcc[b].length-byAcc[a].length;});
-  const ag=document.getElementById('accGrid');ag.innerHTML='';
-  for(const acc of accs){
-    const ts=byAcc[acc];
-    const o=ts.filter(t=>t.state==='open').length,cl=ts.filter(t=>['closed','submitted'].includes(t.state)).length,pr=ts.filter(t=>t.priority==='priority').length;
-    const card=document.createElement('div');card.className='acc-card';
-    card.innerHTML=`<div class="acc-name" title="${acc}">${acc}</div><div class="acc-pills">${o?`<span class="pill open">${o} open</span>`:''}${cl?`<span class="pill closed">${cl} closed</span>`:''}${pr?`<span class="pill priority">${pr} ⚑</span>`:''}</div>`;
-    card.addEventListener('click',()=>openTix(acc,byAcc[acc]));
+
+  const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280'};
+  const o = tix.filter(t => t.state === 'open').length;
+  const cl = tix.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+
+  document.getElementById('dAvatar').textContent = meta.initials;
+  document.getElementById('dAvatar').style.background = meta.color;
+  document.getElementById('dName').textContent = csm;
+  document.getElementById('dSub').textContent = tix.length + ' tickets · ' + o + ' open · ' + cl + ' closed';
+
+  // Build per-account data
+  const byAcc = {};
+  for (const t of tix) (byAcc[t.account] = byAcc[t.account] || []).push(t);
+
+  // Sort: priority tickets first → open tickets → total count
+  const accs = Object.keys(byAcc).sort((a, b) => {
+    const apr = byAcc[a].filter(t => t.priority === 'priority').length;
+    const bpr = byAcc[b].filter(t => t.priority === 'priority').length;
+    if (bpr !== apr) return bpr - apr;
+    const ao = byAcc[a].filter(t => t.state === 'open').length;
+    const bo = byAcc[b].filter(t => t.state === 'open').length;
+    if (bo !== ao) return bo - ao;
+    return byAcc[b].length - byAcc[a].length;
+  });
+
+  const ag = document.getElementById('accGrid'); ag.innerHTML = '';
+  for (const acc of accs) {
+    const ts = byAcc[acc];
+    const o = ts.filter(t => t.state === 'open').length;
+    const cl = ts.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+    const pr = ts.filter(t => t.priority === 'priority').length;
+    const card = document.createElement('div');
+    card.className = 'acc-card' + (pr > 0 ? ' has-priority' : '');
+    card.innerHTML = `<div class="acc-name" title="${acc}">${acc}</div><div class="acc-pills">${pr ? `<span class="pill priority">${pr} ⚑</span>` : ''}${o ? `<span class="pill open">${o} open</span>` : ''}${cl ? `<span class="pill closed">${cl} closed</span>` : ''}</div>`;
+    card.addEventListener('click', () => openTix(acc, byAcc[acc]));
     ag.appendChild(card);
   }
-  const panel=document.getElementById('detailPanel');panel.classList.add('on');
-  if(!silent)panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  const panel = document.getElementById('detailPanel'); panel.classList.add('on');
+  if (!silent) panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 }
 
-function openTix(account,tix){
-  document.querySelectorAll('.acc-card').forEach(c=>c.classList.toggle('active',c.querySelector('.acc-name')?.title===account));
-  document.getElementById('tixTitle').textContent=account;
-  const sorted=[...tix].sort((a,b)=>{if(a.state==='open'&&b.state!=='open')return-1;if(b.state==='open'&&a.state!=='open')return 1;return b.created_at-a.created_at;});
-  const tbody=document.getElementById('tixBody');tbody.innerHTML='';
-  for(const t of sorted){
-    const desc=t.ai_title||t.subject||t.body.slice(0,120)||'(no description)';
-    const isPri=t.priority==='priority';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}  <div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri?'<span class="pdot"></span>':''}<span class="sbadge ${t.state}">${t.state}</span></td><td class="tdesc">${desc}</td>`;
+// ── OPEN TICKET TABLE ─────────────────────────────────────────────────────────
+function openTix(account, tix) {
+  document.querySelectorAll('.acc-card').forEach(c => c.classList.toggle('active', c.querySelector('.acc-name')?.title === account));
+  document.getElementById('tixTitle').textContent = account;
+  // Sort: open first, then by date desc
+  const sorted = [...tix].sort((a, b) => {
+    const ap = a.priority === 'priority' ? 0 : 1;
+    const bp = b.priority === 'priority' ? 0 : 1;
+    if (ap !== bp) return ap - bp;
+    if (a.state === 'open' && b.state !== 'open') return -1;
+    if (b.state === 'open' && a.state !== 'open') return 1;
+    return b.created_at - a.created_at;
+  });
+  const tbody = document.getElementById('tixBody'); tbody.innerHTML = '';
+  for (const t of sorted) {
+    const desc = t.ai_title || t.subject || t.body.slice(0, 120) || '(no description)';
+    const isPri = t.priority === 'priority';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name ? `<div style="font-size:12px">${t.author_name}</div>` : ''}<div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri ? '<span class="pdot"></span>' : ''}<span class="sbadge ${t.state}">${t.state}</span></td><td class="tdesc">${desc}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('tixPanel').classList.add('on');
 }
 
-function closeTix(){
+function closeTix() {
   document.getElementById('tixPanel').classList.remove('on');
-  document.querySelectorAll('.acc-card').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.acc-card').forEach(c => c.classList.remove('active'));
 }
 
-function onPeriodChange(){
-  activeCsm=null;
+function onPeriodChange() {
+  activeCsm = null;
   document.getElementById('detailPanel').classList.remove('on');
-  const p=getSelectedPeriod();
-  const filtered=ALL_TICKETS.filter(t=>t.created_at>=p.start&&t.created_at<=p.end);
+  const p = getSelectedPeriod();
+  const filtered = ALL_TICKETS.filter(t => t.created_at >= p.start && t.created_at <= p.end);
   renderHub(filtered);
 }
 
 // ── LOAD data.json ────────────────────────────────────────────────────────────
-async function init(){
-  try{
-    const res=await fetch('./data.json?v='+Date.now());
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const data=await res.json();
+async function init() {
+  try {
+    const res = await fetch('./data.json?v=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
 
-    if(!data.total_matched){
-      const b=document.getElementById('banner');
-      b.textContent='⚠️  data.json is empty — run the GitHub Action first (Actions tab → Fetch Intercom Data Daily → Run workflow).';
+    if (!data.total_matched) {
+      const b = document.getElementById('banner');
+      b.textContent = '⚠️  data.json is empty — run the GitHub Action first (Actions tab → Fetch Intercom Data Daily → Run workflow).';
       b.classList.add('on');
     }
 
-    ALL_TICKETS=data.tickets||[];
+    ALL_TICKETS = data.tickets || [];
     buildSel(data.generated_at);
 
-    const age=data.generated_date||'unknown';
-    document.getElementById('dataAge').textContent='Data: '+age;
+    const age = data.generated_date || 'unknown';
+    document.getElementById('dataAge').textContent = 'Data: ' + age;
 
     onPeriodChange();
-  }catch(e){
-    document.getElementById('csmGrid').innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: '+e.message+'</div>';
+  } catch (e) {
+    document.getElementById('csmSections').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: ' + e.message + '</div>';
   }
 }
 
