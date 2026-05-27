@@ -19,16 +19,21 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .main{padding:20px 24px;max-width:1400px;margin:0 auto;}
 .banner{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:16px;display:none;}
 .banner.on{display:block;}
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
 .kpi-val{font-size:30px;font-weight:700;}
 .kpi.green .kpi-val{color:var(--green);}
 .kpi.red .kpi-val{color:var(--red);}
+.kpi.amber .kpi-val{color:var(--amber);}
 .kpi.muted .kpi-val{color:var(--muted);}
 .kpi.clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s;}
 .kpi.clickable:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.1);}
 .kpi.clickable.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.15);background:#f0f5ff;}
+
+/* ── FILTER PANEL ── */
 .filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:none;}
 .filter-panel.on{display:block;}
 .filter-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
@@ -40,6 +45,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .filter-csm-card:hover{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,124,255,.1);}
 .filter-csm-name{font-size:12px;font-weight:700;flex:1;}
 .filter-csm-count{font-size:20px;font-weight:700;}
+
+/* ── CSM SECTIONS ── */
 .section-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:12px;}
 .section-block{margin-bottom:20px;}
 .csm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
@@ -57,22 +64,32 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .cst-val.priority{color:var(--red);}
 .cst-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:1px;}
 .total-badge{position:absolute;top:12px;right:12px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;}
+
+/* ── DETAIL PANEL ── */
 .detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:24px;display:none;}
 .detail-panel.on{display:block;}
 .detail-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
 .detail-title{font-size:16px;font-weight:700;}
 .detail-sub{font-size:12px;color:var(--muted);margin-top:2px;}
-.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;}
+
+/* ── ACCOUNT CARDS ── */
+.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-bottom:16px;}
 .acc-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .12s;}
 .acc-card:hover,.acc-card.active{border-color:var(--accent);}
 .acc-card.active{background:#f0f5ff;}
 .acc-card.has-priority{border-left:3px solid var(--red);}
+.acc-card.has-negative{border-top:2px solid var(--amber);}
 .acc-name{font-size:12px;font-weight:700;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .acc-pills{display:flex;gap:5px;flex-wrap:wrap;}
 .pill{font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;}
 .pill.open{background:#d1fae5;color:#065f46;}
 .pill.closed{background:var(--surface2);color:var(--muted);}
 .pill.priority{background:#fee2e2;color:#991b1b;}
+.pill.negative{background:#fef3c7;color:#92400e;}
+.pill.ticket{background:#e0e7ff;color:#3730a3;}
+.pill.chat{background:#f3f4f6;color:#374151;}
+
+/* ── TICKET TABLE ── */
 .tix-panel{display:none;margin-top:14px;}
 .tix-panel.on{display:block;}
 .tix-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
@@ -83,20 +100,28 @@ table.tix th{background:var(--surface2);padding:8px 10px;text-align:left;font-si
 table.tix td{padding:9px 10px;border-bottom:1px solid var(--surface2);vertical-align:top;}
 table.tix tr:last-child td{border-bottom:none;}
 table.tix tr:hover td{background:var(--surface);}
+.tix-group-hdr td{background:var(--surface2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 10px;border-top:1px solid var(--border);}
 .sbadge{display:inline-block;font-size:10px;font-weight:600;border-radius:5px;padding:2px 7px;}
 .sbadge.open{background:#d1fae5;color:#065f46;}
 .sbadge.closed{background:var(--surface2);color:var(--muted);}
 .sbadge.snoozed{background:#fef3c7;color:#92400e;}
 .sbadge.submitted{background:#e0e7ff;color:#3730a3;}
+.sent-neg{display:inline-block;font-size:10px;font-weight:600;border-radius:5px;padding:2px 7px;background:#fef3c7;color:#92400e;}
+.sent-pos{display:inline-block;font-size:10px;font-weight:600;border-radius:5px;padding:2px 7px;background:#d1fae5;color:#065f46;}
+.sent-neu{color:var(--muted);font-size:11px;}
 .pdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle;}
-.tid{font-family:var(--mono);font-size:10px;color:var(--muted);}
-.tdesc{max-width:340px;line-height:1.4;}
+.tid-link{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;}
+.tid-link:hover{text-decoration:underline;}
+.tdesc{max-width:300px;line-height:1.4;}
 .temail{color:var(--muted);font-size:10px;}
 .tdate{white-space:nowrap;color:var(--muted);}
+.tkind{white-space:nowrap;font-size:10px;color:var(--muted);}
+
 .empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .empty-icon{font-size:28px;margin-bottom:8px;}
 .csm-sections{margin-bottom:24px;}
-@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);} .csm-grid{grid-template-columns:1fr;} .main{padding:14px;}}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr);} .csm-grid{grid-template-columns:1fr;} .main{padding:14px;}}
 </style>
 </head>
 <body>
@@ -114,13 +139,17 @@ table.tix tr:hover td{background:var(--surface);}
 
 <div class="main">
   <div class="banner" id="banner"></div>
+
+  <!-- KPI ROW — 5 cards -->
   <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Matched Tickets</div><div class="kpi-val" id="kTotal">—</div></div>
+    <div class="kpi"><div class="kpi-label">Matched</div><div class="kpi-val" id="kTotal">—</div></div>
     <div class="kpi green clickable" id="kpiOpen" onclick="openFilter('open')"><div class="kpi-label">Open ↗</div><div class="kpi-val" id="kOpen">—</div></div>
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
     <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div></div>
+    <div class="kpi amber clickable" id="kpiNegative" onclick="openFilter('negative')"><div class="kpi-label">Negative ↗</div><div class="kpi-val" id="kNegative">—</div></div>
   </div>
 
+  <!-- FILTER PANEL -->
   <div class="filter-panel" id="filterPanel">
     <div class="filter-head">
       <div class="filter-title" id="filterTitle"></div>
@@ -129,10 +158,12 @@ table.tix tr:hover td{background:var(--surface);}
     <div class="filter-csm-list" id="filterCsmList"></div>
   </div>
 
+  <!-- CSM SECTIONS -->
   <div class="csm-sections" id="csmSections">
     <div class="empty"><div class="empty-icon">⏳</div>Loading data…</div>
   </div>
 
+  <!-- DETAIL PANEL -->
   <div class="detail-panel" id="detailPanel">
     <div class="detail-head">
       <div class="avatar" id="dAvatar"></div>
@@ -141,9 +172,12 @@ table.tix tr:hover td{background:var(--surface);}
     <div class="section-lbl">Accounts</div>
     <div class="acc-grid" id="accGrid"></div>
     <div class="tix-panel" id="tixPanel">
-      <div class="tix-head"><div class="tix-title" id="tixTitle"></div><button class="back-btn" onclick="closeTix()">← back</button></div>
+      <div class="tix-head">
+        <div class="tix-title" id="tixTitle"></div>
+        <button class="back-btn" onclick="closeTix()">← back</button>
+      </div>
       <table class="tix">
-        <thead><tr><th>ID</th><th>Author</th><th>Opened</th><th>Status</th><th>Type</th><th>Topic / Description</th></tr></thead>
+        <thead><tr><th>ID</th><th>Author</th><th>Opened</th><th>Status</th><th>Kind / Type</th><th>Sentiment</th><th>Topic / Description</th></tr></thead>
         <tbody id="tixBody"></tbody>
       </table>
     </div>
@@ -151,6 +185,8 @@ table.tix tr:hover td{background:var(--surface);}
 </div>
 
 <script>
+const INTERCOM_BASE = 'https://app.intercom.com/a/inbox/m2ad1co7/inbox/conversation/';
+
 const CSM_META = {
   "Dexter Roy Rapsing Hermosura": {"short": "Dex",      "initials": "DR", "color": "#4f7cff"},
   "Lynne Pagtalunan":             {"short": "Lynne",    "initials": "LP", "color": "#8b5cf6"},
@@ -165,25 +201,14 @@ const CSM_META = {
   "Karyna Kuznietsova":           {"short": "Karyna",   "initials": "KK", "color": "#a855f7"}
 };
 
-// Define sections — order matters, only listed CSMs are shown
 const SECTIONS = [
   {
     label: "Customer Success Managers",
-    csms: [
-      "Jayson Lubera",
-      "Arti Harchekar",
-      "Russia Vasallo",
-      "Dexter Roy Rapsing Hermosura",
-      "Marco Francisco Ferrer",
-      "Lynne Pagtalunan"
-    ]
+    csms: ["Jayson Lubera","Arti Harchekar","Russia Vasallo","Dexter Roy Rapsing Hermosura","Marco Francisco Ferrer","Lynne Pagtalunan"]
   },
   {
     label: "Partner Associates",
-    csms: [
-      "Rachel Kiara Fuellas",
-      "Kurt Daher"
-    ]
+    csms: ["Rachel Kiara Fuellas","Kurt Daher"]
   }
 ];
 
@@ -191,15 +216,47 @@ let ALL_TICKETS = [];
 let activeCsm = null;
 let activeFilter = null;
 
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function isNegative(t) {
+  return (t.sentiment || '').toLowerCase().includes('negative');
+}
+function fmtTs(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleDateString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function setK(id, v) { document.getElementById(id).textContent = v ?? '—'; }
+
+function sentimentBadge(s) {
+  if (!s) return '<span class="sent-neu">—</span>';
+  const lo = s.toLowerCase();
+  if (lo.includes('negative')) return `<span class="sent-neg">⚠ Negative</span>`;
+  if (lo.includes('positive')) return `<span class="sent-pos">✓ Positive</span>`;
+  return `<span class="sent-neu">${s}</span>`;
+}
+
+function kindCell(t) {
+  if (t.kind === 'ticket') {
+    const label = t.ticket_type || 'Ticket';
+    return `<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:#e0e7ff;color:#3730a3">🎫 ${label}</span>`;
+  }
+  return `<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:#f3f4f6;color:#374151">💬 Chat</span>`;
+}
+
+function intercomLink(t) {
+  const lid = t.intercom_link_id || t.id;
+  const display = '#' + lid.slice(-8);
+  return `<a class="tid-link" href="${INTERCOM_BASE}${lid}?view=List" target="_blank">${display}</a>`;
+}
+
 // ── PERIOD SELECTOR ──────────────────────────────────────────────────────────
 function buildPeriods(dataGenAt) {
   const anchor = dataGenAt ? new Date(dataGenAt * 1000) : new Date();
   anchor.setHours(23, 59, 59, 999);
   const periods = [];
   for (let i = 0; i < 8; i++) {
-    const end = new Date(anchor); end.setDate(anchor.getDate() - i * 7); end.setHours(23, 59, 59, 999);
-    const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0, 0, 0, 0);
-    const fmt = d => d.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    const end = new Date(anchor); end.setDate(anchor.getDate() - i * 7); end.setHours(23,59,59,999);
+    const start = new Date(end); start.setDate(end.getDate() - 6); start.setHours(0,0,0,0);
+    const fmt = d => d.toLocaleDateString('en-US', {month:'short',day:'numeric'});
     periods.push({
       label: i === 0 ? `Last 7 days (${fmt(start)}–${fmt(end)})` : fmt(start) + ' – ' + fmt(end),
       start: Math.floor(start.getTime() / 1000),
@@ -218,72 +275,70 @@ function buildSel(genAt) {
 }
 function getSelectedPeriod() { return PERIODS[parseInt(document.getElementById('weekSel').value) || 0]; }
 
-// ── UTILS ────────────────────────────────────────────────────────────────────
-function fmtTs(ts) { if (!ts) return '—'; return new Date(ts * 1000).toLocaleDateString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}); }
-function setK(id, v) { document.getElementById(id).textContent = v ?? '—'; }
-
-// ── BUILD ONE CSM CARD ────────────────────────────────────────────────────────
+// ── BUILD CSM CARD ────────────────────────────────────────────────────────────
 function buildCsmCard(csm, ts) {
-  const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280', short: csm};
-  const o = ts.filter(t => t.state === 'open').length;
-  const cl = ts.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+  const meta = CSM_META[csm] || {initials: csm.slice(0,2).toUpperCase(), color:'#6b7280', short:csm};
+  const o  = ts.filter(t => t.state === 'open').length;
+  const cl = ts.filter(t => ['closed','submitted'].includes(t.state)).length;
   const pr = ts.filter(t => t.priority === 'priority').length;
   const accs = new Set(ts.map(t => t.account)).size;
   const card = document.createElement('div');
   card.className = 'csm-card' + (csm === activeCsm ? ' active' : '');
   card.dataset.csm = csm;
-  card.innerHTML = `<div class="total-badge">${ts.length}</div><div class="csm-head"><div class="avatar" style="background:${meta.color}">${meta.initials}</div><div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs !== 1 ? 's' : ''}</div></div></div><div class="csm-stats"><div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div><div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div><div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div></div>`;
+  card.innerHTML = `<div class="total-badge">${ts.length}</div>
+    <div class="csm-head">
+      <div class="avatar" style="background:${meta.color}">${meta.initials}</div>
+      <div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs!==1?'s':''}</div></div>
+    </div>
+    <div class="csm-stats">
+      <div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div>
+      <div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div>
+      <div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div>
+    </div>`;
   card.addEventListener('click', () => openCsm(csm, ts));
   return card;
 }
 
 // ── RENDER HUB ────────────────────────────────────────────────────────────────
 function renderHub(tix) {
-  const open = tix.filter(t => t.state === 'open').length;
-  const closed = tix.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+  const open     = tix.filter(t => t.state === 'open').length;
+  const closed   = tix.filter(t => ['closed','submitted'].includes(t.state)).length;
   const priority = tix.filter(t => t.priority === 'priority').length;
-  setK('kTotal', tix.length); setK('kOpen', open); setK('kClosed', closed); setK('kPriority', priority);
+  const negative = tix.filter(isNegative).length;
+  setK('kTotal', tix.length);
+  setK('kOpen', open);
+  setK('kClosed', closed);
+  setK('kPriority', priority);
+  setK('kNegative', negative);
 
-  // Build by-CSM index
   const byCsm = {};
   for (const t of tix) (byCsm[t.csm] = byCsm[t.csm] || []).push(t);
 
   const container = document.getElementById('csmSections');
   container.innerHTML = '';
-
   let anyCards = false;
 
   for (const section of SECTIONS) {
-    // Only render section if at least one CSM in it has data
-    const sectionCsms = section.csms.filter(csm => byCsm[csm] && byCsm[csm].length > 0);
-    // Always render section structure; show empty grid if no data
     const block = document.createElement('div');
     block.className = 'section-block';
-
     const lbl = document.createElement('div');
     lbl.className = 'section-lbl';
     lbl.textContent = section.label;
     block.appendChild(lbl);
-
     const grid = document.createElement('div');
     grid.className = 'csm-grid';
-
-    // Render in defined order — skip CSMs with 0 tickets this period
     for (const csm of section.csms) {
       const ts = byCsm[csm];
       if (!ts || ts.length === 0) continue;
       grid.appendChild(buildCsmCard(csm, ts));
       anyCards = true;
     }
-
     if (grid.children.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.style.padding = '20px';
+      empty.className = 'empty'; empty.style.padding = '20px';
       empty.textContent = 'No tickets this period';
       grid.appendChild(empty);
     }
-
     block.appendChild(grid);
     container.appendChild(block);
   }
@@ -291,8 +346,6 @@ function renderHub(tix) {
   if (!anyCards) {
     container.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No matched CSM tickets this period</div>';
   }
-
-  // Restore active CSM detail panel if previously selected
   if (activeCsm && byCsm[activeCsm]) openCsm(activeCsm, byCsm[activeCsm], true);
 }
 
@@ -302,20 +355,22 @@ function openCsm(csm, tix, silent = false) {
   document.querySelectorAll('.csm-card').forEach(c => c.classList.toggle('active', c.dataset.csm === csm));
   closeTix();
 
-  const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280'};
-  const o = tix.filter(t => t.state === 'open').length;
-  const cl = tix.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+  const meta = CSM_META[csm] || {initials: csm.slice(0,2).toUpperCase(), color:'#6b7280'};
+  const o  = tix.filter(t => t.state === 'open').length;
+  const cl = tix.filter(t => ['closed','submitted'].includes(t.state)).length;
+  const neg = tix.filter(isNegative).length;
 
   document.getElementById('dAvatar').textContent = meta.initials;
   document.getElementById('dAvatar').style.background = meta.color;
   document.getElementById('dName').textContent = csm;
-  document.getElementById('dSub').textContent = tix.length + ' tickets · ' + o + ' open · ' + cl + ' closed';
+  document.getElementById('dSub').textContent =
+    tix.length + ' conversations · ' + o + ' open · ' + cl + ' closed' + (neg ? ' · ' + neg + ' negative' : '');
 
-  // Build per-account data
+  // Group by account
   const byAcc = {};
   for (const t of tix) (byAcc[t.account] = byAcc[t.account] || []).push(t);
 
-  // Sort: priority tickets first → open tickets → total count
+  // Sort: priority first → open → negative → count
   const accs = Object.keys(byAcc).sort((a, b) => {
     const apr = byAcc[a].filter(t => t.priority === 'priority').length;
     const bpr = byAcc[b].filter(t => t.priority === 'priority').length;
@@ -323,47 +378,96 @@ function openCsm(csm, tix, silent = false) {
     const ao = byAcc[a].filter(t => t.state === 'open').length;
     const bo = byAcc[b].filter(t => t.state === 'open').length;
     if (bo !== ao) return bo - ao;
+    const an = byAcc[a].filter(isNegative).length;
+    const bn = byAcc[b].filter(isNegative).length;
+    if (bn !== an) return bn - an;
     return byAcc[b].length - byAcc[a].length;
   });
 
   const ag = document.getElementById('accGrid'); ag.innerHTML = '';
   for (const acc of accs) {
     const ts = byAcc[acc];
-    const o = ts.filter(t => t.state === 'open').length;
-    const cl = ts.filter(t => ['closed', 'submitted'].includes(t.state)).length;
+    const o  = ts.filter(t => t.state === 'open').length;
+    const cl = ts.filter(t => ['closed','submitted'].includes(t.state)).length;
     const pr = ts.filter(t => t.priority === 'priority').length;
+    const ne = ts.filter(isNegative).length;
+    const tk = ts.filter(t => t.kind === 'ticket').length;
+    const ch = ts.filter(t => t.kind === 'chat').length;
+
+    let cls = 'acc-card';
+    if (pr > 0) cls += ' has-priority';
+    if (ne > 0) cls += ' has-negative';
+
     const card = document.createElement('div');
-    card.className = 'acc-card' + (pr > 0 ? ' has-priority' : '');
-    card.innerHTML = `<div class="acc-name" title="${acc}">${acc}</div><div class="acc-pills">${pr ? `<span class="pill priority">${pr} ⚑</span>` : ''}${o ? `<span class="pill open">${o} open</span>` : ''}${cl ? `<span class="pill closed">${cl} closed</span>` : ''}</div>`;
+    card.className = cls;
+    card.innerHTML = `
+      <div class="acc-name" title="${acc}">${acc}</div>
+      <div class="acc-pills">
+        ${pr ? `<span class="pill priority">${pr} ⚑</span>` : ''}
+        ${o  ? `<span class="pill open">${o} open</span>` : ''}
+        ${ne ? `<span class="pill negative">⚠ ${ne} neg</span>` : ''}
+        ${tk ? `<span class="pill ticket">🎫 ${tk}</span>` : ''}
+        ${ch ? `<span class="pill chat">💬 ${ch}</span>` : ''}
+      </div>`;
     card.addEventListener('click', () => openTix(acc, byAcc[acc]));
     ag.appendChild(card);
   }
 
-  const panel = document.getElementById('detailPanel'); panel.classList.add('on');
-  if (!silent) panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('on');
+  if (!silent) panel.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 // ── OPEN TICKET TABLE ─────────────────────────────────────────────────────────
 function openTix(account, tix) {
-  document.querySelectorAll('.acc-card').forEach(c => c.classList.toggle('active', c.querySelector('.acc-name')?.title === account));
+  document.querySelectorAll('.acc-card').forEach(c =>
+    c.classList.toggle('active', c.querySelector('.acc-name')?.title === account));
   document.getElementById('tixTitle').textContent = account;
-  // Sort: open first, then by date desc
-  const sorted = [...tix].sort((a, b) => {
+
+  const tbody = document.getElementById('tixBody');
+  tbody.innerHTML = '';
+
+  // Split into tickets and chats
+  const tickets = tix.filter(t => t.kind === 'ticket');
+  const chats   = tix.filter(t => t.kind !== 'ticket');
+
+  // Sort helper: priority → open → newest
+  const sortFn = (a, b) => {
     const ap = a.priority === 'priority' ? 0 : 1;
     const bp = b.priority === 'priority' ? 0 : 1;
     if (ap !== bp) return ap - bp;
     if (a.state === 'open' && b.state !== 'open') return -1;
     if (b.state === 'open' && a.state !== 'open') return 1;
     return b.created_at - a.created_at;
-  });
-  const tbody = document.getElementById('tixBody'); tbody.innerHTML = '';
-  for (const t of sorted) {
-    const desc = t.ai_title || t.subject || t.body.slice(0, 120) || '(no description)';
-    const isPri = t.priority === 'priority';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><span class="tid">#${t.id.slice(-8)}</span></td><td>${t.author_name ? `<div style="font-size:12px">${t.author_name}</div>` : ''}<div class="temail">${t.author_email}</div></td><td class="tdate">${fmtTs(t.created_at)}</td><td>${isPri ? '<span class="pdot"></span>' : ''}<span class="sbadge ${t.state}">${t.state}</span></td><td style="white-space:nowrap;color:var(--muted);font-size:11px">${t.ticket_type || '—'}</td><td class="tdesc">${desc}</td>`;
-    tbody.appendChild(tr);
-  }
+  };
+
+  const renderGroup = (items, groupLabel) => {
+    if (items.length === 0) return;
+    // Section header row
+    const hdr = document.createElement('tr');
+    hdr.className = 'tix-group-hdr';
+    hdr.innerHTML = `<td colspan="7">${groupLabel} (${items.length})</td>`;
+    tbody.appendChild(hdr);
+
+    for (const t of items.sort(sortFn)) {
+      const desc = t.ai_title || t.subject || t.body.slice(0, 120) || '(no description)';
+      const isPri = t.priority === 'priority';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${intercomLink(t)}</td>
+        <td>${t.author_name ? `<div style="font-size:12px">${t.author_name}</div>` : ''}<div class="temail">${t.author_email}</div></td>
+        <td class="tdate">${fmtTs(t.created_at)}</td>
+        <td>${isPri ? '<span class="pdot"></span>' : ''}<span class="sbadge ${t.state}">${t.state}</span></td>
+        <td class="tkind">${kindCell(t)}</td>
+        <td>${sentimentBadge(t.sentiment)}</td>
+        <td class="tdesc">${desc}</td>`;
+      tbody.appendChild(tr);
+    }
+  };
+
+  renderGroup(tickets, '🎫 Tickets');
+  renderGroup(chats,   '💬 Chats');
+
   document.getElementById('tixPanel').classList.add('on');
 }
 
@@ -372,20 +476,26 @@ function closeTix() {
   document.querySelectorAll('.acc-card').forEach(c => c.classList.remove('active'));
 }
 
-// ── FILTER PANEL (Open / Priority KPI click) ──────────────────────────────────
+// ── FILTER PANEL ──────────────────────────────────────────────────────────────
 function openFilter(type) {
   const p = getSelectedPeriod();
   const periodTix = ALL_TICKETS.filter(t => t.created_at >= p.start && t.created_at <= p.end);
-  const tix = type === 'open'
-    ? periodTix.filter(t => t.state === 'open')
-    : periodTix.filter(t => t.priority === 'priority');
+
+  let tix, color, label;
+  if (type === 'open') {
+    tix = periodTix.filter(t => t.state === 'open');
+    color = 'var(--green)'; label = 'Open';
+  } else if (type === 'priority') {
+    tix = periodTix.filter(t => t.priority === 'priority');
+    color = 'var(--red)'; label = 'Priority';
+  } else {
+    tix = periodTix.filter(isNegative);
+    color = 'var(--amber)'; label = 'Negative Sentiment';
+  }
 
   activeFilter = type;
-  const color = type === 'open' ? 'var(--green)' : 'var(--red)';
-  const label = type === 'open' ? 'Open' : 'Priority';
-  document.getElementById('filterTitle').textContent = label + ' Tickets — ' + tix.length + ' total';
+  document.getElementById('filterTitle').textContent = label + ' — ' + tix.length + ' conversations';
 
-  // Group by CSM in SECTIONS order
   const byCsm = {};
   for (const t of tix) (byCsm[t.csm] = byCsm[t.csm] || []).push(t);
 
@@ -395,20 +505,24 @@ function openFilter(type) {
   for (const csm of allSectionCsms) {
     const ts = byCsm[csm];
     if (!ts || ts.length === 0) continue;
-    const meta = CSM_META[csm] || {initials: csm.slice(0, 2).toUpperCase(), color: '#6b7280', short: csm};
+    const meta = CSM_META[csm] || {initials: csm.slice(0,2).toUpperCase(), color:'#6b7280', short:csm};
     const card = document.createElement('div');
     card.className = 'filter-csm-card';
-    card.innerHTML = `<div class="avatar" style="background:${meta.color};width:30px;height:30px;font-size:11px;flex-shrink:0">${meta.initials}</div><div class="filter-csm-name">${meta.short}</div><div class="filter-csm-count" style="color:${color}">${ts.length}</div>`;
+    card.innerHTML = `
+      <div class="avatar" style="background:${meta.color};width:30px;height:30px;font-size:11px;flex-shrink:0">${meta.initials}</div>
+      <div class="filter-csm-name">${meta.short}</div>
+      <div class="filter-csm-count" style="color:${color}">${ts.length}</div>`;
     card.addEventListener('click', () => { closeFilter(); openCsm(csm, ts); });
     list.appendChild(card);
   }
 
   document.querySelectorAll('.kpi.clickable').forEach(k => k.classList.remove('active'));
-  document.getElementById(type === 'open' ? 'kpiOpen' : 'kpiPriority').classList.add('active');
+  const kpiId = {open:'kpiOpen', priority:'kpiPriority', negative:'kpiNegative'}[type];
+  if (kpiId) document.getElementById(kpiId).classList.add('active');
 
   const fp = document.getElementById('filterPanel');
   fp.classList.add('on');
-  fp.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  fp.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 function closeFilter() {
@@ -441,13 +555,11 @@ async function init() {
 
     ALL_TICKETS = data.tickets || [];
     buildSel(data.generated_at);
-
-    const age = data.generated_date || 'unknown';
-    document.getElementById('dataAge').textContent = 'Data: ' + age;
-
+    document.getElementById('dataAge').textContent = 'Data: ' + (data.generated_date || 'unknown');
     onPeriodChange();
   } catch (e) {
-    document.getElementById('csmSections').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: ' + e.message + '</div>';
+    document.getElementById('csmSections').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: ' + e.message + '</div>';
   }
 }
 
