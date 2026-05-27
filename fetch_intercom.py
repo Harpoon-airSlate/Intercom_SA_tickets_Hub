@@ -97,12 +97,21 @@ while True:
         ca = c.get("custom_attributes") or {}
         _tt = ticket.get("ticket_type")
         ticket_type_name = _tt.get("name", "") if isinstance(_tt, dict) else (_tt or "")
+        # kind: "ticket" if conversation has a ticket type, otherwise "chat"
+        kind = "ticket" if ticket_type_name else "chat"
+        # proper Intercom ID from custom attributes (for building direct links)
+        intercom_link_id = str(ca.get("ID", "") or c["id"])
+        # product sentiment
+        sentiment = str(ca.get("Product sentiment", "") or "").strip()
         matched.append({
             "id": c["id"],
+            "intercom_link_id": intercom_link_id,
             "created_at": ts,
             "state": state,
             "priority": c.get("priority", "not_priority"),
             "ticket_type": ticket_type_name,
+            "kind": kind,
+            "sentiment": sentiment,
             "body": strip_html((c.get("source") or {}).get("body", "")),
             "subject": strip_html((c.get("source") or {}).get("subject", "")),
             "ai_title": ca.get("AI Title", ""),
