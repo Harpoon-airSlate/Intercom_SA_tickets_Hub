@@ -24,6 +24,22 @@ DAYS = 30
 now_ts   = int(time.time())
 start_ts = now_ts - DAYS * 86400
 
+
+def fetch_teams(token):
+    """Fetch all Intercom teams and return id->name map."""
+    try:
+        req = Request("https://api.intercom.io/teams", headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json",
+            "Intercom-Version": "2.11"
+        })
+        with urlopen(req, timeout=15) as r:
+            data = json.loads(r.read())
+        return {str(t["id"]): t["name"] for t in data.get("teams", [])}
+    except Exception as ex:
+        print(f"Warning: could not fetch teams: {ex}")
+        return {}
+
 def strip_html(s):
     return re.sub(r"<[^>]+>", " ", s or "").strip()
 
@@ -45,6 +61,8 @@ def ic_post(path, body):
         raise
 
 matched  = []
+TEAMS = fetch_teams(TOKEN)
+print(f"Teams loaded: {TEAMS}")
 cursor   = None
 page     = 0
 total_ic = 0
@@ -103,6 +121,16 @@ while True:
         intercom_link_id = str(ca.get("ID", "") or c["id"])
         # product sentiment
         sentiment = str(ca.get("Product sentiment", "") or "").strip()
+        # team inbox
+        team_id = str(c.get("team_assignee_id") or "")
+        team_inbox = TEAMS.get(team_id, "")
+        # CX Score fields
+        cx_raw = ca.get("CX Score rating", "")
+        try:
+            cx_score = int(float(cx_raw)) if cx_raw not in ("", None) else None
+        except (ValueError, TypeError):
+            cx_score = None
+        cx_score_explanation = str(ca.get("CX Score explanation", "") or "").strip()
         matched.append({
             "id": c["id"],
             "intercom_link_id": intercom_link_id,
@@ -112,6 +140,9 @@ while True:
             "ticket_type": ticket_type_name,
             "kind": kind,
             "sentiment": sentiment,
+            "team_inbox": team_inbox,
+            "cx_score": cx_score,
+            "cx_score_explanation": cx_score_explanation,
             "body": strip_html((c.get("source") or {}).get("body", "")),
             "subject": strip_html((c.get("source") or {}).get("subject", "")),
             "ai_title": ca.get("AI Title", ""),
