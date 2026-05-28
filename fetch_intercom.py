@@ -43,7 +43,7 @@ def fetch_teams(token):
 def strip_html(s):
     return re.sub(r"<[^>]+>", " ", s or "").strip()
 
-def ic_post(path, body):
+def ic_post(path, body, retries=3):
     url = "https://api.intercom.io" + path
     data = json.dumps(body).encode()
     req = Request(url, data=data, headers={
@@ -52,13 +52,22 @@ def ic_post(path, body):
         "Content-Type": "application/json",
         "Intercom-Version": "2.11"
     })
-    try:
-        with urlopen(req, timeout=30) as r:
-            return json.loads(r.read())
-    except HTTPError as e:
-        body = e.read().decode()
-        print(f"  HTTP {e.code}: {body[:200]}")
-        raise
+    for attempt in range(1, retries + 1):
+        try:
+            with urlopen(req, timeout=90) as r:
+                return json.loads(r.read())
+        except HTTPError as e:
+            body = e.read().decode()
+            print(f"  HTTP {e.code}: {body[:200]}")
+            raise
+        except Exception as ex:
+            if attempt < retries:
+                wait = attempt * 5
+                print(f"  Attempt {attempt} failed ({ex}), retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                print(f"  All {retries} attempts failed: {ex}")
+                raise
 
 matched  = []
 TEAMS = fetch_teams(TOKEN)
