@@ -474,22 +474,25 @@ function openTix(account, tix) {
   };
 
   let rowIdx = 0;
-  const renderGroup = (items, groupLabel) => {
+  const renderGroup = (items, groupLabel, isTicketGroup) => {
     if (items.length===0) return;
     const hdr=document.createElement('tr'); hdr.className='tix-group-hdr';
     hdr.innerHTML=`<td colspan="10">${groupLabel} (${items.length})</td>`;
     tbody.appendChild(hdr);
 
     for (const t of items.sort(sortFn)) {
-      const idx = rowIdx++;
+      const idx  = rowIdx++;
       const lid  = t.intercom_link_id || t.id;
-      const desc = t.ai_title||t.subject||t.body.slice(0,100)||'(no description)';
+      const desc = t.ai_title||t.subject||(t.body||'').slice(0,100)||'(no description)';
       const isPri= t.priority==='priority';
+      // Only tickets get the expand toggle
+      const expandCell = isTicketGroup
+        ? `<td><button class="expand-btn" onclick="toggleRow(${idx})" title="Expand">▶</button></td>`
+        : `<td></td>`;
 
-      // Main row
       const tr = document.createElement('tr'); tr.className='tix-main';
       tr.innerHTML=`
-        <td><button class="expand-btn" onclick="toggleRow(${idx})" title="Expand">▶</button></td>
+        ${expandCell}
         <td><a class="tid-link" href="${INTERCOM_BASE}${lid}?view=List" target="_blank">${lid}</a></td>
         <td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}<div class="temail">${t.author_email}</div></td>
         <td class="tdate">${fmtTs(t.created_at)}</td>
@@ -501,28 +504,30 @@ function openTix(account, tix) {
         <td class="tdesc">${desc}</td>`;
       tbody.appendChild(tr);
 
-      // Expandable detail row
-      const dr = document.createElement('tr'); dr.className='tix-detail'; dr.id=`tix-detail-${idx}`;
-      const bodyText = t.body || '(no message body captured)';
-      const explText = t.cx_score_explanation || '—';
-      dr.innerHTML=`<td colspan="10">
-        <div class="detail-sections">
-          <div class="detail-block">
-            <div class="detail-block-label">First customer message</div>
-            <div class="detail-block-body">${bodyText}</div>
+      // Expandable detail row — tickets only
+      if (isTicketGroup) {
+        const dr = document.createElement('tr'); dr.className='tix-detail'; dr.id=`tix-detail-${idx}`;
+        const bodyText = t.body || '(no message body captured)';
+        const explText = t.cx_score_explanation || '—';
+        dr.innerHTML=`<td colspan="10">
+          <div class="detail-sections">
+            <div class="detail-block">
+              <div class="detail-block-label">First customer message</div>
+              <div class="detail-block-body">${bodyText}</div>
+            </div>
+            ${t.cx_score!=null||explText!=='—'?`<div class="detail-block">
+              <div class="detail-block-label">CX Score explanation</div>
+              <div class="detail-block-body">${explText}</div>
+            </div>`:''}
           </div>
-          ${t.cx_score!=null||explText!=='—'?`<div class="detail-block">
-            <div class="detail-block-label">CX Score explanation</div>
-            <div class="detail-block-body">${explText}</div>
-          </div>`:''}
-        </div>
-      </td>`;
-      tbody.appendChild(dr);
+        </td>`;
+        tbody.appendChild(dr);
+      }
     }
   };
 
-  renderGroup(tickets,'🎫 Tickets');
-  renderGroup(chats,  '💬 Chats');
+  renderGroup(tickets,'🎫 Tickets', true);
+  renderGroup(chats,  '💬 Chats',   false);
 
   document.getElementById('tixPanel').classList.add('on');
 }
