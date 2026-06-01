@@ -89,6 +89,17 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .pill.ticket{background:#e0e7ff;color:#3730a3;}
 .pill.chat{background:#f3f4f6;color:#374151;}
 
+/* Archive badge on account card */
+.arch-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--surface2);color:var(--muted);margin-left:4px;}
+
+/* Archive section in ticket panel */
+.archive-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 0;user-select:none;border-top:1px solid var(--border);margin-top:10px;}
+.archive-toggle-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+.archive-toggle-arr{font-size:11px;color:var(--muted);transition:transform .15s;}
+.archive-toggle-arr.open{transform:rotate(90deg);}
+.archive-body{display:none;margin-top:6px;}
+.archive-body.on{display:block;}
+
 /* CX Score badge on account card */
 .cx-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:4px;}
 .cx-badge.cx-green{background:#d1fae5;color:#065f46;}
@@ -239,9 +250,11 @@ const SECTIONS = [
   {label:"Partner Associates",        csms:["Rachel Kiara Fuellas","Kurt Daher"]}
 ];
 
-let ALL_TICKETS = [];   // full 30-day dataset
-let activeCsm   = null;
-let activeFilter = null;
+let ALL_TICKETS   = [];   // full 30-day dataset
+let ALL_ARCHIVE   = [];   // aged-out tickets from archive.json
+let ACC_ARCHIVE   = {};   // account → archived tickets map (precomputed)
+let activeCsm     = null;
+let activeFilter  = null;
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 const isNegative = t => (t.sentiment || '').toLowerCase().includes('negative');
@@ -436,8 +449,12 @@ function openCsm(csm, tix, silent=false) {
     if (ne>0) cls+=' has-negative';
 
     const card = document.createElement('div'); card.className=cls;
+    const archCount = (ACC_ARCHIVE[acc] || []).length;
     card.innerHTML=`
-      <div class="acc-name" title="${acc}">${acc}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div class="acc-name" title="${acc}" style="flex:1">${acc}</div>
+        ${archCount ? `<span class="arch-badge" title="${archCount} archived">A ${archCount}</span>` : ''}
+      </div>
       <div class="acc-pills">
         ${pr?`<span class="pill priority">${pr} ⚑</span>`:''}
         ${o ?`<span class="pill open">${o} open</span>`:''}
@@ -529,6 +546,61 @@ function openTix(account, tix) {
   renderGroup(tickets,'🎫 Tickets', true);
   renderGroup(chats,  '💬 Chats',   false);
 
+  // ── ARCHIVE SECTION ───────────────────────────────────────────────────────
+  const archTix = ACC_ARCHIVE[account] || [];
+  if (archTix.length > 0) {
+    // Toggle header (outside the table)
+    const archToggle = document.createElement('div');
+    archToggle.className = 'archive-toggle';
+    archToggle.innerHTML = `
+      <span class="archive-toggle-arr" id="archArr">▶</span>
+      <span class="archive-toggle-lbl">📦 Archive (${archTix.length})</span>`;
+
+    const archBody = document.createElement('div');
+    archBody.className = 'archive-body';
+    archBody.id = 'archBody';
+
+    // Archive table
+    const archTable = document.createElement('table');
+    archTable.className = 'tix';
+    archTable.innerHTML = `<thead><tr>
+      <th></th><th>ID</th><th>Author</th><th>Opened</th><th>Status</th>
+      <th>Kind / Type</th><th>Team Inbox</th><th>Sentiment</th><th>CX</th><th>Topic / Description</th>
+    </tr></thead>`;
+    const archBody2 = document.createElement('tbody');
+
+    for (const t of archTix.sort((a,b)=>b.created_at-a.created_at)) {
+      const lid  = t.intercom_link_id || t.id;
+      const desc = t.ai_title||t.subject||(t.body||'').slice(0,100)||'(no description)';
+      const isPri= t.priority==='priority';
+      const tr = document.createElement('tr'); tr.className='tix-main';
+      tr.innerHTML=`
+        <td></td>
+        <td><a class="tid-link" href="${INTERCOM_BASE}${lid}?view=List" target="_blank">${lid}</a></td>
+        <td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}<div class="temail">${t.author_email}</div></td>
+        <td class="tdate">${fmtTs(t.created_at)}</td>
+        <td>${isPri?'<span class="pdot"></span>':''}<span class="sbadge ${t.state}">${t.state}</span></td>
+        <td class="tkind">${kindBadge(t)}</td>
+        <td style="font-size:11px;color:var(--muted);white-space:nowrap">${t.team_inbox||'—'}</td>
+        <td>${sentimentBadge(t.sentiment)}</td>
+        <td>${cxNumHtml(t.cx_score)}</td>
+        <td class="tdesc">${desc}</td>`;
+      archBody2.appendChild(tr);
+    }
+
+    archTable.appendChild(archBody2);
+    archBody.appendChild(archTable);
+
+    archToggle.addEventListener('click', () => {
+      const open = archBody.classList.toggle('on');
+      document.getElementById('archArr').classList.toggle('open', open);
+    });
+
+    // Append below the table wrapper
+    document.getElementById('tixPanel').appendChild(archToggle);
+    document.getElementById('tixPanel').appendChild(archBody);
+  }
+
   document.getElementById('tixPanel').classList.add('on');
 }
 
@@ -595,17 +667,38 @@ function onPeriodChange() {
 // ── LOAD data.json ────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const res = await fetch('./data.json?v='+Date.now());
+    // Load live data and archive in parallel
+    const [res, archRes] = await Promise.all([
+      fetch('./data.json?v='+Date.now()),
+      fetch('./archive.json?v='+Date.now()).catch(()=>null)
+    ]);
+
     if (!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
+
     if (!data.total_matched) {
       const b=document.getElementById('banner');
       b.textContent='⚠️  data.json is empty — run the GitHub Action first (Actions tab → Fetch Intercom Data Daily → Run workflow).';
       b.classList.add('on');
     }
+
     ALL_TICKETS = data.tickets||[];
+
+    // Load archive if available
+    if (archRes && archRes.ok) {
+      const archData = await archRes.json();
+      ALL_ARCHIVE = archData.tickets||[];
+    }
+
+    // Build per-account archive map
+    ACC_ARCHIVE = {};
+    for (const t of ALL_ARCHIVE) {
+      (ACC_ARCHIVE[t.account] = ACC_ARCHIVE[t.account]||[]).push(t);
+    }
+
     buildSel(data.generated_at);
-    document.getElementById('dataAge').textContent='Data: '+(data.generated_date||'unknown');
+    document.getElementById('dataAge').textContent='Data: '+(data.generated_date||'unknown')
+      +(ALL_ARCHIVE.length ? ` · ${ALL_ARCHIVE.length} archived` : '');
     onPeriodChange();
   } catch(e) {
     document.getElementById('csmSections').innerHTML=
