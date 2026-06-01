@@ -72,6 +72,16 @@ def ic_post(path, body, retries=3):
 matched  = []
 TEAMS = fetch_teams(TOKEN)
 print(f"Teams loaded: {TEAMS}")
+
+# Load previous data.json so we can detect tickets that aged out
+_prev_tickets = []
+if os.path.exists("data.json"):
+    try:
+        with open("data.json", "r") as _f:
+            _prev_tickets = json.load(_f).get("tickets", [])
+        print(f"Loaded {len(_prev_tickets)} tickets from previous data.json for archive diff")
+    except Exception as _e:
+        print(f"Warning: could not read previous data.json: {_e}")
 cursor   = None
 page     = 0
 total_ic = 0
@@ -182,3 +192,35 @@ with open("data.json", "w") as f:
     json.dump(output, f, separators=(",", ":"))
 
 print(f"Wrote data.json ({len(matched)} matched tickets)")
+
+# ── ARCHIVE: move aged-out tickets into archive.json ─────────────────────────
+new_ids = {t["id"] for t in matched}
+
+# Read existing archive
+_arch_tickets = []
+if os.path.exists("archive.json"):
+    try:
+        with open("archive.json", "r") as _f:
+            _arch_tickets = json.load(_f).get("tickets", [])
+    except Exception as _e:
+        print(f"Warning: could not read archive.json: {_e}")
+
+_arch_ids = {t["id"] for t in _arch_tickets}
+
+# Tickets that were in previous fetch but are gone now (aged out) → archive them
+aged_out = [t for t in _prev_tickets if t["id"] not in new_ids and t["id"] not in _arch_ids]
+
+if aged_out:
+    _arch_tickets.extend(aged_out)
+    print(f"Archiving {len(aged_out)} aged-out tickets → archive total: {len(_arch_tickets)}")
+else:
+    print("No new tickets to archive")
+
+with open("archive.json", "w") as _f:
+    json.dump({
+        "updated_at": now_ts,
+        "total": len(_arch_tickets),
+        "tickets": _arch_tickets
+    }, _f, separators=(",", ":"))
+
+print(f"Wrote archive.json ({len(_arch_tickets)} total archived tickets)")
