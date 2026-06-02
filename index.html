@@ -614,6 +614,8 @@ function toggleRow(idx) {
 function closeTix() {
   document.getElementById('tixPanel').classList.remove('on');
   document.querySelectorAll('.acc-card').forEach(c=>c.classList.remove('active'));
+  // Remove dynamically appended archive elements to prevent duplicates on re-open
+  document.querySelectorAll('.archive-toggle, .archive-body').forEach(el=>el.remove());
 }
 
 // ── FILTER PANEL ──────────────────────────────────────────────────────────────
