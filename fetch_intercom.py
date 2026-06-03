@@ -69,6 +69,59 @@ def ic_post(path, body, retries=3):
                 print(f"  All {retries} attempts failed: {ex}")
                 raise
 
+def ic_get(path, retries=3):
+    """GET request to Intercom API with retry logic."""
+    url = "https://api.intercom.io" + path
+    req = Request(url, headers={
+        "Authorization": f"Bearer {TOKEN}",
+        "Accept": "application/json",
+        "Intercom-Version": "2.11"
+    })
+    for attempt in range(1, retries + 1):
+        try:
+            with urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except HTTPError as e:
+            print(f"  GET {path} HTTP {e.code}")
+            raise
+        except Exception as ex:
+            if attempt < retries:
+                time.sleep(attempt * 3)
+            else:
+                raise
+    return {}
+
+def get_last_reply(conv_id):
+    """
+    Fetch conversation parts for one open ticket.
+    Returns (last_reply_by, last_reply_at) where:
+      last_reply_by = "support" | "customer"
+      last_reply_at = unix timestamp of that message
+    Returns (None, None) on failure.
+    """
+    try:
+        data = ic_get(f"/conversations/{conv_id}")
+        parts = (data.get("conversation_parts") or {}).get("conversation_parts", [])
+        # Filter to actual messages (exclude assignments, notes with no body, etc.)
+        messages = [
+            p for p in parts
+            if p.get("body") and p.get("author", {}).get("type") in ("admin", "bot", "user")
+        ]
+        if not messages:
+            # Fall back to the source (first customer message)
+            source_type = (data.get("source") or {}).get("author", {}).get("type", "user")
+            source_ts   = data.get("created_at", 0)
+            by = "customer" if source_type == "user" else "support"
+            return by, source_ts
+
+        last = messages[-1]
+        author_type = last.get("author", {}).get("type", "user")
+        by = "customer" if author_type == "user" else "support"
+        return by, last.get("created_at", 0)
+    except Exception as ex:
+        print(f"  Warning: could not fetch parts for {conv_id}: {ex}")
+        return None, None
+
 matched  = []
 TEAMS = fetch_teams(TOKEN)
 print(f"Teams loaded: {TEAMS}")
@@ -143,6 +196,13 @@ while True:
         # team inbox
         team_id = str(c.get("team_assignee_id") or "")
         team_inbox = TEAMS.get(team_id, "")
+
+        # last reply + days open (only fetch parts for open tickets)
+        if state == "open":
+            last_reply_by, last_reply_at = get_last_reply(c["id"])
+            days_open = round((now_ts - ts) / 86400, 1) if ts else None
+        else:
+            last_reply_by, last_reply_at, days_open = None, None, None
         # CX Score fields
         cx_raw = ca.get("CX Score rating", "")
         try:
@@ -160,6 +220,9 @@ while True:
             "kind": kind,
             "sentiment": sentiment,
             "team_inbox": team_inbox,
+            "last_reply_by": last_reply_by,
+            "last_reply_at": last_reply_at,
+            "days_open": days_open,
             "cx_score": cx_score,
             "cx_score_explanation": cx_score_explanation,
             "body": strip_html((c.get("source") or {}).get("body", "")),
