@@ -214,6 +214,8 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
             <th>ID</th>
             <th>Author</th>
             <th>Opened</th>
+            <th>Days</th>
+            <th>Last Reply</th>
             <th>Status</th>
             <th>Kind / Type</th>
             <th>Team Inbox</th>
@@ -285,6 +287,19 @@ function cxNumHtml(score) {
   if (score == null) return '<span style="color:var(--muted)">—</span>';
   const cls = score <= 2 ? 'cx1' : score <= 4 ? 'cx3' : 'cx5';
   return `<span class="cx-num ${cls}">${score}</span>`;
+}
+
+function lastReplyBadge(by) {
+  if (!by) return '<span style="color:var(--muted)">—</span>';
+  if (by === 'customer') return '<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;background:#fef3c7;color:#92400e" title="Waiting on support">⏳ Customer</span>';
+  return '<span style="display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;background:#d1fae5;color:#065f46" title="Support replied last">✓ Support</span>';
+}
+
+function daysOpenHtml(days) {
+  if (days == null) return '<span style="color:var(--muted)">—</span>';
+  const d = Math.round(days);
+  const color = d >= 14 ? 'var(--red)' : d >= 7 ? 'var(--amber)' : 'var(--text)';
+  return `<span style="font-weight:700;color:${color}">${d}d</span>`;
 }
 
 // Compute per-account average CX from ALL 30-day tickets (ignores period filter)
@@ -494,7 +509,7 @@ function openTix(account, tix) {
   const renderGroup = (items, groupLabel, isTicketGroup) => {
     if (items.length===0) return;
     const hdr=document.createElement('tr'); hdr.className='tix-group-hdr';
-    hdr.innerHTML=`<td colspan="10">${groupLabel} (${items.length})</td>`;
+    hdr.innerHTML=`<td colspan="12">${groupLabel} (${items.length})</td>`;
     tbody.appendChild(hdr);
 
     for (const t of items.sort(sortFn)) {
@@ -513,6 +528,8 @@ function openTix(account, tix) {
         <td><a class="tid-link" href="${INTERCOM_BASE}${lid}?view=List" target="_blank">${lid}</a></td>
         <td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}<div class="temail">${t.author_email}</div></td>
         <td class="tdate">${fmtTs(t.created_at)}</td>
+        <td style="white-space:nowrap">${daysOpenHtml(t.days_open)}</td>
+        <td style="white-space:nowrap">${lastReplyBadge(t.last_reply_by)}</td>
         <td>${isPri?'<span class="pdot"></span>':''}<span class="sbadge ${t.state}">${t.state}</span></td>
         <td class="tkind">${kindBadge(t)}</td>
         <td style="font-size:11px;color:var(--muted);white-space:nowrap">${t.team_inbox||'—'}</td>
@@ -526,7 +543,7 @@ function openTix(account, tix) {
         const dr = document.createElement('tr'); dr.className='tix-detail'; dr.id=`tix-detail-${idx}`;
         const bodyText = t.body || '(no message body captured)';
         const explText = t.cx_score_explanation || '—';
-        dr.innerHTML=`<td colspan="10">
+        dr.innerHTML=`<td colspan="12">
           <div class="detail-sections">
             <div class="detail-block">
               <div class="detail-block-label">First customer message</div>
@@ -564,7 +581,7 @@ function openTix(account, tix) {
     const archTable = document.createElement('table');
     archTable.className = 'tix';
     archTable.innerHTML = `<thead><tr>
-      <th></th><th>ID</th><th>Author</th><th>Opened</th><th>Status</th>
+      <th></th><th>ID</th><th>Author</th><th>Opened</th><th>Days</th><th>Last Reply</th><th>Status</th>
       <th>Kind / Type</th><th>Team Inbox</th><th>Sentiment</th><th>CX</th><th>Topic / Description</th>
     </tr></thead>`;
     const archBody2 = document.createElement('tbody');
@@ -579,6 +596,8 @@ function openTix(account, tix) {
         <td><a class="tid-link" href="${INTERCOM_BASE}${lid}?view=List" target="_blank">${lid}</a></td>
         <td>${t.author_name?`<div style="font-size:12px">${t.author_name}</div>`:''}<div class="temail">${t.author_email}</div></td>
         <td class="tdate">${fmtTs(t.created_at)}</td>
+        <td style="white-space:nowrap">${daysOpenHtml(t.days_open)}</td>
+        <td style="white-space:nowrap">${lastReplyBadge(t.last_reply_by)}</td>
         <td>${isPri?'<span class="pdot"></span>':''}<span class="sbadge ${t.state}">${t.state}</span></td>
         <td class="tkind">${kindBadge(t)}</td>
         <td style="font-size:11px;color:var(--muted);white-space:nowrap">${t.team_inbox||'—'}</td>
