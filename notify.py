@@ -4,22 +4,26 @@ notify.py — Intercom SA Tickets notification engine
 Runs after fetch_intercom.py in the GitHub Action.
 
 Rules:
-  1. PRIORITY    — new open priority ticket → DM to Arti or Jayson
+  1. PRIORITY    — new open priority ticket → #csm_team with @CSM mention
   2. PENDING_SUP — open ticket 48h+ where customer sent last msg → #sn-support
-  3. PENDING_LOW — same as 2, but CX score < 4 → escalated message
+  3. PENDING_LOW — same as 2, but CX score < 4 → escalated message to #sn-support
+
+Slack delivery: Incoming Webhooks (no bot token / no admin required).
+State: notified.json is committed back to the repo — no local machine needed.
 """
 
 import json, os, sys
 import requests
 
-SLACK_TOKEN        = os.environ.get("SLACK_BOT_TOKEN", "")
-INTERCOM_BASE      = "https://app.intercom.com/a/inbox/m2ad1co7/inbox/conversation/"
-SN_SUPPORT_CHANNEL = "CA0MB5RNY"
-NOTIFIED_FILE      = "notified.json"
-DATA_FILE          = "data.json"
-PENDING_SUP_HOURS  = 48  # hours before a customer-last ticket triggers a support nudge
+# GitHub secrets — set these in repo Settings → Secrets → Actions
+WEBHOOK_CSM_TEAM   = os.environ.get("SLACK_WEBHOOK_CSM_TEAM", "")   # #csm_team
+WEBHOOK_SN_SUPPORT = os.environ.get("SLACK_WEBHOOK_SN_SUPPORT", "")  # #sn-support
 
-# Slack user IDs — update if team changes
+INTERCOM_BASE  = "https://app.intercom.com/a/inbox/m2ad1co7/inbox/conversation/"
+NOTIFIED_FILE  = "notified.json"
+DATA_FILE      = "data.json"
+
+# Slack member IDs — used for @mentions in channel messages
 CSM_SLACK = {
     "Arti Harchekar":                   "U074FAVT1FS",
     "Jayson Lubera":                     "U0442CJ36RG",
@@ -32,14 +36,12 @@ CSM_SLACK = {
     "Federico Mendez":                   "",  # add Slack UID when known
 }
 
-# Only these CSMs have priority accounts — only they receive Rule 1 DMs
 PRIORITY_CSMS = {"Arti Harchekar", "Jayson Lubera"}
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def load_notified():
-    """Load previously sent notification IDs to avoid re-firing."""
     try:
         with open(NOTIFIED_FILE) as f:
             return json.load(f)
@@ -52,29 +54,29 @@ def save_notified(state):
         json.dump(state, f, indent=2)
 
 
-def post(channel, text):
-    """Send a Slack message. Dry-runs if SLACK_BOT_TOKEN is not set."""
-    if not SLACK_TOKEN:
-        print(f"  [DRY RUN → {channel}] {text[:160]}")
-        return {"ok": True, "dry_run": True}
+def post_webhook(webhook_url, text):
+    """Send a message via Slack Incoming Webhook. Dry-runs if URL not set."""
+    if not webhook_url:
+        print(f"  [DRY RUN] {text[:180]}")
+        return
     r = requests.post(
-        "https://slack.com/api/chat.postMessage",
-        headers={
-            "Authorization": f"Bearer {SLACK_TOKEN}",
-            "Content-Type": "application/json",
-        },
-        json={"channel": channel, "text": text},
+        webhook_url,
+        headers={"Content-Type": "application/json"},
+        json={"text": text},
         timeout=10,
     )
-    result = r.json()
-    if not result.get("ok"):
-        print(f"  Slack error [{channel}]: {result.get('error')}", file=sys.stderr)
-    return result
+    if r.status_code != 200:
+        print(f"  Slack webhook error: {r.status_code} {r.text}", file=sys.stderr)
 
 
 def ticket_url(t):
     lid = t.get("intercom_link_id") or t["id"]
     return f"{INTERCOM_BASE}{lid}"
+
+
+def mention(csm):
+    uid = CSM_SLACK.get(csm)
+    return f"<@{uid}>" if uid else f"*{csm}*"
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -87,7 +89,7 @@ def main():
     notified = load_notified()
     changed  = False
 
-    # ── Rule 1: New open priority ticket → DM Arti or Jayson ─────────────────
+    # ── Rule 1: New open priority ticket → #csm_team @mention ────────────────
     for t in tickets:
         if t.get("priority") != "priority" or t.get("state") != "open":
             continue
@@ -100,24 +102,19 @@ def main():
         if csm not in PRIORITY_CSMS:
             continue
 
-        uid = CSM_SLACK.get(csm)
-        if not uid:
-            print(f"  [PRIORITY] No Slack UID for {csm} — skipping ticket {tid}")
-            continue
-
         account = t.get("account", "—")
         desc    = t.get("ai_title") or t.get("subject") or "(no description)"
 
         msg = (
-            f":rotating_light: *Priority ticket opened for one of your accounts*\n"
+            f":rotating_light: *Priority ticket opened* — {mention(csm)}\n"
             f"*Account:* {account}\n"
             f"*Topic:* {desc}\n"
             f"*Intercom:* {ticket_url(t)}"
         )
-        post(uid, msg)
+        post_webhook(WEBHOOK_CSM_TEAM, msg)
         notified["priority"].append(tid)
         changed = True
-        print(f"[PRIORITY] DM → {csm} | ticket {tid} | {account}")
+        print(f"[PRIORITY] #csm_team @{csm} | ticket {tid} | {account}")
 
     # ── Rules 2 & 3: Pending support 48h+ → #sn-support ─────────────────────
     for t in tickets:
@@ -127,7 +124,7 @@ def main():
             continue
 
         days = t.get("days_open") or 0
-        if days < 2:      # less than 48 hours
+        if days < 2:
             continue
 
         tid = str(t["id"])
@@ -157,7 +154,7 @@ def main():
                 f"*Intercom:* {ticket_url(t)}"
             )
 
-        post(SN_SUPPORT_CHANNEL, msg)
+        post_webhook(WEBHOOK_SN_SUPPORT, msg)
         notified["pending_support"].append(tid)
         changed = True
         label = "PENDING_LOW_CX" if low_cx else "PENDING_SUPPORT"
