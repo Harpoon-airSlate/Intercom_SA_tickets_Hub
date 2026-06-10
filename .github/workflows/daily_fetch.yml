@@ -2,8 +2,8 @@ name: Fetch Intercom Data Daily
 
 on:
   schedule:
-    - cron: "0 6 * * *"
-  workflow_dispatch:
+    - cron: "0 6 * * *"   # Every day at 6:00 AM UTC
+  workflow_dispatch:        # Also allows manual trigger from GitHub UI
 
 permissions:
   contents: write
@@ -20,24 +20,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install requests
-
       - name: Fetch Intercom data
         env:
           INTERCOM_TOKEN: ${{ secrets.INTERCOM_TOKEN }}
         run: python3 fetch_intercom.py
 
-      - name: Run notifications
-        env:
-          SLACK_WEBHOOK_CSM_TEAM:   ${{ secrets.SLACK_WEBHOOK_CSM_TEAM }}
-          SLACK_WEBHOOK_SN_SUPPORT: ${{ secrets.SLACK_WEBHOOK_SN_SUPPORT }}
-        run: python3 notify.py
-
-      - name: Commit updated files
+      - name: Commit data.json
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json archive.json notified.json
+          git add data.json
           git diff --staged --quiet || git commit -m "chore: update Intercom data $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
