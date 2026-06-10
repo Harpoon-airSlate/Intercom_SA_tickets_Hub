@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 """
 notify.py — Intercom SA Tickets notification engine
-Runs after fetch_intercom.py in the GitHub Action.
+All notifications → #sales_assisted_tickets
 
-Rules:
-  1. PRIORITY    — new open priority ticket → #csm_team with @CSM mention
-  2. PENDING_SUP — open ticket 48h+ where customer sent last msg → #sn-support
-  3. PENDING_LOW — same as 2, but CX score < 4 → escalated message to #sn-support
+Daily rules (every run):
+  1. PRIORITY    — new open priority ticket → @CSM mention
+  2. PENDING_SUP — open 48h+, customer sent last msg, no support reply
+  3. PENDING_LOW — same as 2, but CX score < 4 (escalated)
 
-Slack delivery: Incoming Webhooks (no bot token / no admin required).
-State: notified.json is committed back to the repo — no local machine needed.
+Monday only:
+  4. WEEKLY DIGEST — priority + feature request tickets, grouped by CSM
 """
 
 import json, os, sys
+from datetime import datetime, timezone
+from collections import defaultdict
 import requests
 
-# GitHub secrets — set these in repo Settings → Secrets → Actions
-WEBHOOK_CSM_TEAM   = os.environ.get("SLACK_WEBHOOK_CSM_TEAM", "")   # #csm_team
-WEBHOOK_SN_SUPPORT = os.environ.get("SLACK_WEBHOOK_SN_SUPPORT", "")  # #sn-support
+WEBHOOK = os.environ.get("SLACK_WEBHOOK_SA_TICKETS", "")
 
-INTERCOM_BASE  = "https://app.intercom.com/a/inbox/m2ad1co7/inbox/conversation/"
-NOTIFIED_FILE  = "notified.json"
-DATA_FILE      = "data.json"
+INTERCOM_BASE = "https://app.intercom.com/a/inbox/m2ad1co7/inbox/conversation/"
+HUB_URL       = "https://harpoon-airslate.github.io/Intercom_SA_tickets_Hub/"
+NOTIFIED_FILE = "notified.json"
+DATA_FILE     = "data.json"
 
-# Slack member IDs — used for @mentions in channel messages
 CSM_SLACK = {
     "Arti Harchekar":                   "U074FAVT1FS",
     "Jayson Lubera":                     "U0442CJ36RG",
@@ -33,13 +33,10 @@ CSM_SLACK = {
     "Russia Vasallo":                    "U01NFS3NNMT",
     "Rachel Kiara Fuellas":              "U01QLKVL1CG",
     "Kurt Daher":                        "U03KFFTNGBA",
-    "Federico Mendez":                   "",  # add Slack UID when known
+    "Federico Mendez":                   "",
 }
-
 PRIORITY_CSMS = {"Arti Harchekar", "Jayson Lubera"}
 
-
-# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def load_notified():
     try:
@@ -54,24 +51,18 @@ def save_notified(state):
         json.dump(state, f, indent=2)
 
 
-def post_webhook(webhook_url, text):
-    """Send a message via Slack Incoming Webhook. Dry-runs if URL not set."""
-    if not webhook_url:
-        print(f"  [DRY RUN] {text[:180]}")
+def post(text):
+    if not WEBHOOK:
+        print(f"[DRY RUN] {text[:200]}")
         return
     r = requests.post(
-        webhook_url,
+        WEBHOOK,
         headers={"Content-Type": "application/json"},
         json={"text": text},
         timeout=10,
     )
     if r.status_code != 200:
-        print(f"  Slack webhook error: {r.status_code} {r.text}", file=sys.stderr)
-
-
-def ticket_url(t):
-    lid = t.get("intercom_link_id") or t["id"]
-    return f"{INTERCOM_BASE}{lid}"
+        print(f"Slack error: {r.status_code} {r.text}", file=sys.stderr)
 
 
 def mention(csm):
@@ -79,9 +70,18 @@ def mention(csm):
     return f"<@{uid}>" if uid else f"*{csm}*"
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+def turl(t):
+    return f"{INTERCOM_BASE}{t.get('intercom_link_id') or t['id']}"
+
+
+def is_feature_request(t):
+    return (t.get("ticket_type") or "").lower() == "feature request"
+
 
 def main():
+    today = datetime.now(timezone.utc)
+    is_monday = today.weekday() == 0
+
     with open(DATA_FILE) as f:
         data = json.load(f)
 
@@ -89,44 +89,37 @@ def main():
     notified = load_notified()
     changed  = False
 
-    # ── Rule 1: New open priority ticket → #csm_team @mention ────────────────
+    # ── Rule 1: New open priority ticket → @CSM alert ────────────────────────
     for t in tickets:
         if t.get("priority") != "priority" or t.get("state") != "open":
             continue
-
         tid = str(t["id"])
         if tid in notified["priority"]:
             continue
-
         csm = t.get("csm", "")
         if csm not in PRIORITY_CSMS:
             continue
 
         account = t.get("account", "—")
         desc    = t.get("ai_title") or t.get("subject") or "(no description)"
-
         msg = (
-            f":rotating_light: *Priority ticket opened* — {mention(csm)}\n"
+            f":rotating_light: *Priority ticket* — {mention(csm)}\n"
             f"*Account:* {account}\n"
             f"*Topic:* {desc}\n"
-            f"*Intercom:* {ticket_url(t)}"
+            f"<{turl(t)}|Open in Intercom>"
         )
-        post_webhook(WEBHOOK_CSM_TEAM, msg)
+        post(msg)
         notified["priority"].append(tid)
         changed = True
-        print(f"[PRIORITY] #csm_team @{csm} | ticket {tid} | {account}")
+        print(f"[PRIORITY] {csm} | {tid} | {account}")
 
-    # ── Rules 2 & 3: Pending support 48h+ → #sn-support ─────────────────────
+    # ── Rules 2 & 3: Pending support 48h+ ────────────────────────────────────
     for t in tickets:
-        if t.get("state") != "open":
+        if t.get("state") != "open" or t.get("last_reply_by") != "customer":
             continue
-        if t.get("last_reply_by") != "customer":
-            continue
-
         days = t.get("days_open") or 0
         if days < 2:
             continue
-
         tid = str(t["id"])
         if tid in notified["pending_support"]:
             continue
@@ -138,32 +131,69 @@ def main():
 
         if low_cx:
             msg = (
-                f":warning: *Support follow-up needed — low CX customer*\n"
+                f":warning: *Support follow-up — low CX customer*\n"
                 f"*Account:* {account}  |  CSM: {csm}\n"
-                f"*Ticket:* `{t['id']}` — open *{days:.0f} days*, "
-                f"customer replied last, no support response yet\n"
-                f"*CX Score:* {cx}/5 :red_circle:\n"
-                f"*Intercom:* {ticket_url(t)}"
+                f"*Ticket:* `{t['id']}` — {days:.0f}d open, customer replied last, no support reply\n"
+                f"*CX:* {cx}/5 :red_circle:  <{turl(t)}|Open in Intercom>"
             )
         else:
             msg = (
                 f":hourglass_flowing_sand: *Support follow-up needed*\n"
                 f"*Account:* {account}  |  CSM: {csm}\n"
-                f"*Ticket:* `{t['id']}` — open *{days:.0f} days*, "
-                f"customer replied last, no support response yet\n"
-                f"*Intercom:* {ticket_url(t)}"
+                f"*Ticket:* `{t['id']}` — {days:.0f}d open, customer replied last, no support reply\n"
+                f"<{turl(t)}|Open in Intercom>"
             )
-
-        post_webhook(WEBHOOK_SN_SUPPORT, msg)
+        post(msg)
         notified["pending_support"].append(tid)
         changed = True
-        label = "PENDING_LOW_CX" if low_cx else "PENDING_SUPPORT"
-        print(f"[{label}] #sn-support | ticket {t['id']} | {account} | {days:.0f}d")
+        print(f"[{'PENDING_LOW_CX' if low_cx else 'PENDING_SUP'}] {t['id']} | {account} | {days:.0f}d")
+
+    # ── Rule 4 (Monday only): Weekly digest — priority + feature requests ────
+    if is_monday:
+        open_tix     = [t for t in tickets if t.get("state") == "open"]
+        priority_tix = [t for t in open_tix if t.get("priority") == "priority"]
+        fr_tix       = [t for t in tickets if is_feature_request(t)]  # all states
+
+        lines = [
+            f":spiral_notepad: *Weekly SA Tickets Digest* — {today.strftime('%b %d, %Y')}  |  <{HUB_URL}|Hub>",
+            "",
+        ]
+
+        # Priority open — grouped by CSM
+        if priority_tix:
+            lines.append(f":rotating_light: *Priority open ({len(priority_tix)})*")
+            by_csm = defaultdict(list)
+            for t in priority_tix:
+                by_csm[t.get("csm", "—")].append(t)
+            for csm, tix in sorted(by_csm.items()):
+                accounts = ", ".join(dict.fromkeys(t.get("account","—")[:40] for t in tix))
+                ids      = ", ".join(f"`{t['id']}`" for t in tix)
+                lines.append(f"  {mention(csm)}: {accounts} — {ids}")
+            lines.append("")
+
+        # Feature requests — grouped by CSM
+        if fr_tix:
+            lines.append(f":sparkles: *Feature requests ({len(fr_tix)})*")
+            by_csm = defaultdict(list)
+            for t in fr_tix:
+                by_csm[t.get("csm", "—")].append(t)
+            for csm, tix in sorted(by_csm.items()):
+                accounts = ", ".join(dict.fromkeys(t.get("account","—")[:40] for t in tix))
+                ids      = ", ".join(f"`{t['id']}`" for t in tix)
+                state_tag = f"({tix[0].get('state','?')})" if len(tix)==1 else ""
+                lines.append(f"  {mention(csm)}: {accounts} {state_tag}— {ids}")
+            lines.append("")
+
+        if not priority_tix and not fr_tix:
+            lines.append(":white_check_mark: No priority or feature request tickets this week.")
+
+        post("\n".join(lines))
+        print(f"[WEEKLY DIGEST] Posted — priority:{len(priority_tix)} FR:{len(fr_tix)}")
 
     if changed:
         save_notified(notified)
         print("notified.json saved.")
-    else:
+    elif not is_monday:
         print("Nothing new to notify.")
 
 
