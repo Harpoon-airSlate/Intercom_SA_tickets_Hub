@@ -21,7 +21,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .banner.on{display:block;}
 
 /* ── KPI ROW ── */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px;}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
 .kpi-val{font-size:30px;font-weight:700;}
@@ -155,6 +155,7 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
 .empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .empty-icon{font-size:28px;margin-bottom:8px;}
 .csm-sections{margin-bottom:24px;}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr);}.csm-grid{grid-template-columns:1fr;}.main{padding:14px;}}
 </style>
@@ -181,6 +182,7 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
     <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div></div>
     <div class="kpi amber clickable" id="kpiNegative" onclick="openFilter('negative')"><div class="kpi-label">Negative ↗</div><div class="kpi-val" id="kNegative">—</div></div>
+    <div class="kpi clickable" id="kpiFeatureReq" style="border-color:var(--accent2)" onclick="openFilter('feature_request')"><div class="kpi-label" style="color:var(--accent2)">Feature Req ↗</div><div class="kpi-val" id="kFeatureReq" style="color:var(--accent2)">—</div></div>
   </div>
 
   <div class="filter-panel" id="filterPanel">
@@ -381,10 +383,11 @@ function buildCsmCard(csm, ts) {
 function renderHub(tix) {
   const open     = tix.filter(t=>t.state==='open').length;
   const closed   = tix.filter(t=>['closed','submitted'].includes(t.state)).length;
-  const priority = tix.filter(t=>t.priority==='priority').length;
-  const negative = tix.filter(isNegative).length;
+  const priority   = tix.filter(t=>t.priority==='priority').length;
+  const negative   = tix.filter(isNegative).length;
+  const featureReq = tix.filter(t=>(t.ticket_type||'').toLowerCase()==='feature request').length;
   setK('kTotal',tix.length); setK('kOpen',open); setK('kClosed',closed);
-  setK('kPriority',priority); setK('kNegative',negative);
+  setK('kPriority',priority); setK('kNegative',negative); setK('kFeatureReq',featureReq);
 
   const byCsm = {};
   for (const t of tix) (byCsm[t.csm]=byCsm[t.csm]||[]).push(t);
@@ -643,9 +646,10 @@ function openFilter(type) {
   const periodTix = ALL_TICKETS.filter(t=>t.created_at>=p.start&&t.created_at<=p.end);
 
   let tix, color, label;
-  if (type==='open')     { tix=periodTix.filter(t=>t.state==='open');          color='var(--green)';  label='Open'; }
-  else if (type==='priority') { tix=periodTix.filter(t=>t.priority==='priority'); color='var(--red)';    label='Priority'; }
-  else                   { tix=periodTix.filter(isNegative);                   color='var(--amber)';  label='Negative Sentiment'; }
+  if (type==='open')              { tix=periodTix.filter(t=>t.state==='open');                                              color='var(--green)';   label='Open'; }
+  else if (type==='priority')    { tix=periodTix.filter(t=>t.priority==='priority');                                          color='var(--red)';     label='Priority'; }
+  else if (type==='feature_request') { tix=periodTix.filter(t=>(t.ticket_type||'').toLowerCase()==='feature request');       color='var(--accent2)'; label='Feature Requests'; }
+  else                           { tix=periodTix.filter(isNegative);                                                          color='var(--amber)';   label='Negative Sentiment'; }
 
   activeFilter=type;
   document.getElementById('filterTitle').textContent = label+' — '+tix.length+' conversations';
@@ -664,7 +668,7 @@ function openFilter(type) {
   }
 
   document.querySelectorAll('.kpi.clickable').forEach(k=>k.classList.remove('active'));
-  const kpiId={open:'kpiOpen',priority:'kpiPriority',negative:'kpiNegative'}[type];
+  const kpiId={open:'kpiOpen',priority:'kpiPriority',negative:'kpiNegative',feature_request:'kpiFeatureReq'}[type];
   if (kpiId) document.getElementById(kpiId).classList.add('active');
 
   const fp=document.getElementById('filterPanel');
