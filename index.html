@@ -390,15 +390,15 @@ function buildCsmCard(csm, ts) {
   const card = document.createElement('div');
   card.className = 'csm-card'+(csm===activeCsm?' active':'');
   card.dataset.csm = csm;
-  card.innerHTML = `<div class="total-badge">${ts.length}</div>
+  card.innerHTML = `
     <div class="csm-head">
       <div class="avatar" style="background:${meta.color}">${meta.initials}</div>
       <div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs!==1?'s':''}</div></div>
     </div>
     <div class="csm-stats">
+      <div><div class="cst-val" style="color:var(--text)">${ts.length}</div><div class="cst-lbl">Total</div></div>
       <div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div>
-      <div><div class="cst-val closed">${cl}</div><div class="cst-lbl">Closed</div></div>
-      <div><div class="cst-val priority">${pr}</div><div class="cst-lbl">Priority</div></div>
+      <div><div class="cst-val" style="color:var(--green)">${cl}</div><div class="cst-lbl">Achieved</div></div>
     </div>`;
   card.addEventListener('click', ()=>openCsm(csm,ts));
   return card;
@@ -544,8 +544,8 @@ function openCsm(csm, tix, silent=false) {
   }
 
   if (zoneBuckets) {
-    // Render with ARR zone headers
-    const zoneOrder = [...(zones||[]).map(z=>z.label), 'No ARR'];
+    // Render highest ARR zone first, unknown ARR last
+    const zoneOrder = [...(zones||[]).map(z=>z.label).reverse(), 'No ARR'];
     for (const zoneLabel of zoneOrder) {
       const accsInZone = zoneBuckets[zoneLabel];
       if (!accsInZone || accsInZone.length===0) continue;
@@ -557,8 +557,12 @@ function openCsm(csm, tix, silent=false) {
       for (const acc of accsInZone) renderAccCard(acc);
     }
   } else {
-    // Flat list, already sorted
+    // Flat list: ARR desc → priority → open → negative → count
     const flatAccs = Object.keys(byAcc).sort((a,b)=>{
+      if (hasArrData) {
+        const aArr = (ARR_DATA[a]?.arr||0), bArr = (ARR_DATA[b]?.arr||0);
+        if (bArr!==aArr) return bArr-aArr;
+      }
       const apr=byAcc[a].filter(t=>t.priority==='priority').length, bpr=byAcc[b].filter(t=>t.priority==='priority').length;
       if (bpr!==apr) return bpr-apr;
       const ao=byAcc[a].filter(t=>t.state==='open').length, bo=byAcc[b].filter(t=>t.state==='open').length;
