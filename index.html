@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales Assist · Intercom Tickets Hub</title>
 <style>
-:root{color-scheme:light;--bg:#ffffff;--surface:#f9f9fb;--surface2:#f3f3f7;--border:#e0e0e8;--accent:#4f7cff;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--text:#1f2937;--muted:#6b7280;--sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;}
+:root{color-scheme:light;--bg:#ffffff;--surface:#f9f9fb;--surface2:#f3f3f7;--border:#e0e0e8;--accent:#4f7cff;--accent2:#8b5cf6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--text:#1f2937;--muted:#6b7280;--sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono','Courier New',monospace;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
 .topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
@@ -155,9 +155,22 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
 .empty{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
 .empty-icon{font-size:28px;margin-bottom:8px;}
 .csm-sections{margin-bottom:24px;}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;display:flex;align-items:center;}
+.search-input{appearance:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 30px 6px 32px;font-size:13px;color:var(--text);width:220px;transition:border-color .15s,box-shadow .15s,width .2s;}
+.search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,124,255,.12);width:280px;}
+.search-input::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:13px;}
+.search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;line-height:1;padding:0;display:none;}
+.search-clear.visible{display:block;}
+.search-clear:hover{color:var(--text);}
+.search-results-banner{background:#f0f5ff;border:1px solid #c7d9ff;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--accent);font-weight:600;display:flex;align-items:center;justify-content:space-between;}
+.search-highlight{background:#fef9c3;border-radius:3px;padding:0 2px;}
+
 @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
-@media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr);}.csm-grid{grid-template-columns:1fr;}.main{padding:14px;}}
+@media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr);}.csm-grid{grid-template-columns:1fr;}.main{padding:14px;}.search-input{width:160px;}.search-input:focus{width:200px;}}
 </style>
 </head>
 <body>
@@ -168,6 +181,11 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
     <h1>Sales Assist · Intercom Tickets Hub</h1>
   </div>
   <div class="topbar-right">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput" type="text" placeholder="Search accounts, tickets…" oninput="onSearch(this.value)" />
+      <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search">×</button>
+    </div>
     <select class="week-sel" id="weekSel" onchange="onPeriodChange()"></select>
     <span class="data-age" id="dataAge"></span>
   </div>
@@ -192,6 +210,11 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
       <button class="filter-close" onclick="closeFilter()">×</button>
     </div>
     <div class="filter-csm-list" id="filterCsmList"></div>
+  </div>
+
+  <div id="searchResultsBanner" style="display:none" class="search-results-banner">
+    <span id="searchResultsText"></span>
+    <button style="background:none;border:none;cursor:pointer;color:var(--accent);font-weight:700;font-size:13px;" onclick="clearSearch()">Clear ×</button>
   </div>
 
   <div class="csm-sections" id="csmSections">
@@ -258,6 +281,7 @@ const SECTIONS = [
 let ALL_TICKETS   = [];   // full 30-day dataset
 let ALL_ARCHIVE   = [];   // aged-out tickets from archive.json
 let ACC_ARCHIVE   = {};   // account → archived tickets map (precomputed)
+let ARR_DATA      = {};   // account → {arr, csm} — loaded from arr_data.json
 let activeCsm     = null;
 let activeFilter  = null;
 
@@ -442,8 +466,20 @@ function openCsm(csm, tix, silent=false) {
   const byAcc = {};
   for (const t of tix) (byAcc[t.account]=byAcc[t.account]||[]).push(t);
 
-  // Sort: priority → open → negative → count
-  const accs = Object.keys(byAcc).sort((a,b)=>{
+  // ARR zone definitions per CSM
+  const ARR_ZONES = {
+    "Jayson Lubera":                [{label:"5–10k",min:5000,max:10000},{label:"10–20k",min:10000,max:20000},{label:"20k+",min:20000,max:Infinity}],
+    "Arti Harchekar":               [{label:"5–10k",min:5000,max:10000},{label:"10–20k",min:10000,max:20000},{label:"20k+",min:20000,max:Infinity}],
+    "Dexter Roy Rapsing Hermosura": [{label:"0–2k",min:0,max:2000},{label:"2–5k",min:2000,max:5000},{label:"5k+",min:5000,max:Infinity}],
+    "Lynne Pagtalunan":             [{label:"0–2k",min:0,max:2000},{label:"2–5k",min:2000,max:5000},{label:"5k+",min:5000,max:Infinity}],
+    "Marco Francisco Ferrer":       [{label:"0–2k",min:0,max:2000},{label:"2–5k",min:2000,max:5000},{label:"5k+",min:5000,max:Infinity}],
+    "Russia Vasallo":               [{label:"5–10k",min:5000,max:10000},{label:"10k+",min:10000,max:Infinity}],
+  };
+  const zones = ARR_ZONES[csm];
+  const hasArrData = Object.keys(ARR_DATA).length > 0;
+
+  // Sort helper: priority → open → negative → count
+  const sortAccs = (accList) => accList.sort((a,b)=>{
     const apr=byAcc[a].filter(t=>t.priority==='priority').length, bpr=byAcc[b].filter(t=>t.priority==='priority').length;
     if (bpr!==apr) return bpr-apr;
     const ao=byAcc[a].filter(t=>t.state==='open').length, bo=byAcc[b].filter(t=>t.state==='open').length;
@@ -453,8 +489,30 @@ function openCsm(csm, tix, silent=false) {
     return byAcc[b].length-byAcc[a].length;
   });
 
+  // Build zone buckets if we have ARR data and zone rules for this CSM
+  let zoneBuckets = null;
+  if (hasArrData && zones) {
+    zoneBuckets = {};
+    for (const z of zones) zoneBuckets[z.label] = [];
+    zoneBuckets['No ARR'] = [];
+    for (const acc of Object.keys(byAcc)) {
+      const arrInfo = ARR_DATA[acc];
+      if (!arrInfo || arrInfo.arr == null) { zoneBuckets['No ARR'].push(acc); continue; }
+      const arr = arrInfo.arr;
+      const zone = zones.find(z=>arr>=z.min&&arr<z.max);
+      if (zone) zoneBuckets[zone.label].push(acc);
+      else zoneBuckets['No ARR'].push(acc);
+    }
+    // Sort each bucket
+    for (const k of Object.keys(zoneBuckets)) sortAccs(zoneBuckets[k]);
+  } else {
+    sortAccs(Object.keys(byAcc));
+  }
+
   const ag = document.getElementById('accGrid'); ag.innerHTML='';
-  for (const acc of accs) {
+
+  // Helper to build and append a single account card
+  function renderAccCard(acc) {
     const ts=byAcc[acc];
     const o  = ts.filter(t=>t.state==='open').length;
     const cl = ts.filter(t=>['closed','submitted'].includes(t.state)).length;
@@ -463,13 +521,11 @@ function openCsm(csm, tix, silent=false) {
     const tk = ts.filter(t=>t.kind==='ticket').length;
     const ch = ts.filter(t=>t.kind!=='ticket').length;
     const cx = accCxMap[acc] ?? null;
-
-    let cls='acc-card';
-    if (pr>0) cls+=' has-priority';
-    if (ne>0) cls+=' has-negative';
-
+    let cls='acc-card'; if (pr>0) cls+=' has-priority'; if (ne>0) cls+=' has-negative';
     const card = document.createElement('div'); card.className=cls;
     const archCount = (ACC_ARCHIVE[acc] || []).length;
+    const arrInfo   = ARR_DATA[acc];
+    const arrTag    = arrInfo ? `<span style="font-size:10px;font-weight:700;color:var(--muted);margin-top:4px;display:block;">ARR $${arrInfo.arr>=1000?((arrInfo.arr/1000).toFixed(1)+'k'):arrInfo.arr}</span>` : '';
     card.innerHTML=`
       <div style="display:flex;align-items:flex-start;justify-content:space-between">
         <div class="acc-name" title="${acc}" style="flex:1">${acc}</div>
@@ -482,9 +538,36 @@ function openCsm(csm, tix, silent=false) {
         ${tk?`<span class="pill ticket">🎫 ${tk}</span>`:''}
         ${ch?`<span class="pill chat">💬 ${ch}</span>`:''}
       </div>
-      ${cxBadgeHtml(cx)}`;
+      ${cxBadgeHtml(cx)}${arrTag}`;
     card.addEventListener('click',()=>openTix(acc,byAcc[acc]));
     ag.appendChild(card);
+  }
+
+  if (zoneBuckets) {
+    // Render with ARR zone headers
+    const zoneOrder = [...(zones||[]).map(z=>z.label), 'No ARR'];
+    for (const zoneLabel of zoneOrder) {
+      const accsInZone = zoneBuckets[zoneLabel];
+      if (!accsInZone || accsInZone.length===0) continue;
+      // Zone header
+      const hdr = document.createElement('div');
+      hdr.style.cssText='grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px;';
+      hdr.textContent = `ARR ${zoneLabel} · ${accsInZone.length} account${accsInZone.length!==1?'s':''}`;
+      ag.appendChild(hdr);
+      for (const acc of accsInZone) renderAccCard(acc);
+    }
+  } else {
+    // Flat list, already sorted
+    const flatAccs = Object.keys(byAcc).sort((a,b)=>{
+      const apr=byAcc[a].filter(t=>t.priority==='priority').length, bpr=byAcc[b].filter(t=>t.priority==='priority').length;
+      if (bpr!==apr) return bpr-apr;
+      const ao=byAcc[a].filter(t=>t.state==='open').length, bo=byAcc[b].filter(t=>t.state==='open').length;
+      if (bo!==ao) return bo-ao;
+      const an=byAcc[a].filter(isNegative).length, bn=byAcc[b].filter(isNegative).length;
+      if (bn!==an) return bn-an;
+      return byAcc[b].length-byAcc[a].length;
+    });
+    for (const acc of flatAccs) renderAccCard(acc);
   }
 
   const panel=document.getElementById('detailPanel'); panel.classList.add('on');
@@ -685,6 +768,127 @@ function closeFilter() {
   document.querySelectorAll('.kpi.clickable').forEach(k=>k.classList.remove('active'));
 }
 
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+let searchTimer = null;
+function onSearch(q) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>runSearch(q.trim()), 180);
+  document.getElementById('searchClear').classList.toggle('visible', q.trim().length > 0);
+}
+
+function runSearch(q) {
+  if (!q) { clearSearch(); return; }
+
+  const lq = q.toLowerCase();
+  // Match against all fields we care about
+  const allTix = [...ALL_TICKETS, ...ALL_ARCHIVE];
+  const matched = allTix.filter(t => {
+    return (
+      (t.account||'').toLowerCase().includes(lq) ||
+      (t.csm||'').toLowerCase().includes(lq) ||
+      String(t.id||'').includes(lq) ||
+      (t.ai_title||'').toLowerCase().includes(lq) ||
+      (t.subject||'').toLowerCase().includes(lq) ||
+      (t.team_inbox||'').toLowerCase().includes(lq) ||
+      (t.ticket_type||'').toLowerCase().includes(lq) ||
+      (t.author_email||'').toLowerCase().includes(lq)
+    );
+  });
+
+  // Close any open panels
+  closeFilter(); activeCsm=null;
+  document.getElementById('detailPanel').classList.remove('on');
+
+  // Show results banner
+  const banner = document.getElementById('searchResultsBanner');
+  banner.style.display = 'flex';
+  document.getElementById('searchResultsText').textContent =
+    `${matched.length} result${matched.length!==1?'s':''} for "${q}"`;
+
+  // Build per-CSM grouping of matched tickets → group into accounts
+  const byCsm = {};
+  for (const t of matched) {
+    const csm = t.csm || '—';
+    if (!byCsm[csm]) byCsm[csm] = {};
+    const acct = t.account || '—';
+    if (!byCsm[csm][acct]) byCsm[csm][acct] = [];
+    byCsm[csm][acct].push(t);
+  }
+
+  const container = document.getElementById('csmSections');
+  container.innerHTML = '';
+
+  if (matched.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">🔎</div>No results for <strong>"${q}"</strong></div>`;
+    return;
+  }
+
+  // Render one section per CSM
+  const csmOrder = SECTIONS.flatMap(s=>s.csms);
+  const sortedCsms = Object.keys(byCsm).sort((a,b)=>{
+    const ia = csmOrder.indexOf(a); const ib = csmOrder.indexOf(b);
+    return (ia<0?999:ia)-(ib<0?999:ib);
+  });
+
+  for (const csm of sortedCsms) {
+    const accts = byCsm[csm];
+    const meta = CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280',short:csm};
+    const totalTix = Object.values(accts).reduce((s,ts)=>s+ts.length,0);
+
+    const block = document.createElement('div'); block.className='section-block';
+    block.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div class="avatar" style="background:${meta.color};width:30px;height:30px;font-size:11px;">${meta.initials}</div>
+        <span style="font-size:13px;font-weight:700;">${csm}</span>
+        <span style="font-size:12px;color:var(--muted);">${totalTix} ticket${totalTix!==1?'s':''} across ${Object.keys(accts).length} account${Object.keys(accts).length!==1?'s':''}</span>
+      </div>
+      <div class="acc-grid" id="srAccGrid_${csm.replace(/\s/g,'_')}"></div>`;
+    container.appendChild(block);
+
+    const grid = block.querySelector('.acc-grid');
+    for (const [acctName, tix] of Object.entries(accts)) {
+      const hasPri = tix.some(t=>t.priority==='priority');
+      const hasNeg = tix.some(isNegative);
+      const open   = tix.filter(t=>t.state==='open').length;
+      const cls = ['acc-card', hasPri?'has-priority':'', hasNeg?'has-negative':''].join(' ');
+      const card = document.createElement('div'); card.className=cls.trim();
+
+      // Highlight matching text in account name
+      const displayName = highlightMatch(acctName, q);
+      card.innerHTML = `
+        <div class="acc-name" title="${acctName}">${displayName}</div>
+        <div class="acc-pills">
+          ${open?`<span class="pill open">${open} open</span>`:''}
+          ${hasPri?`<span class="pill priority">priority</span>`:''}
+          ${hasNeg?`<span class="pill negative">negative</span>`:''}
+        </div>
+        <div style="font-size:10px;color:var(--muted);">${tix.length} ticket${tix.length!==1?'s':''}</div>`;
+      card.addEventListener('click',()=>{
+        closeFilter();
+        const allCsmMatchedTix = Object.values(accts).flat();
+        openCsm(csm, allCsmMatchedTix, true);
+        openTix(acctName, tix);
+        document.getElementById('detailPanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+      });
+      grid.appendChild(card);
+    }
+  }
+}
+
+function highlightMatch(text, q) {
+  if (!q) return escHtml(text);
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return escHtml(text).replace(new RegExp(escaped,'gi'), m=>`<span class="search-highlight">${m}</span>`);
+}
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function clearSearch() {
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchClear').classList.remove('visible');
+  document.getElementById('searchResultsBanner').style.display='none';
+  onPeriodChange();
+}
+
 function onPeriodChange() {
   activeCsm=null; closeFilter();
   document.getElementById('detailPanel').classList.remove('on');
@@ -696,9 +900,10 @@ function onPeriodChange() {
 async function init() {
   try {
     // Load live data and archive in parallel
-    const [res, archRes] = await Promise.all([
+    const [res, archRes, arrRes] = await Promise.all([
       fetch('./data.json?v='+Date.now()),
-      fetch('./archive.json?v='+Date.now()).catch(()=>null)
+      fetch('./archive.json?v='+Date.now()).catch(()=>null),
+      fetch('./arr_data.json?v='+Date.now()).catch(()=>null)
     ]);
 
     if (!res.ok) throw new Error('HTTP '+res.status);
@@ -724,6 +929,15 @@ async function init() {
       (ACC_ARCHIVE[t.account] = ACC_ARCHIVE[t.account]||[]).push(t);
     }
 
+    // Load ARR data if available
+    if (arrRes && arrRes.ok) {
+      const arrList = await arrRes.json();
+      ARR_DATA = {};
+      for (const row of (arrList||[])) {
+        if (row.account) ARR_DATA[row.account] = {arr: row.arr||0, csm: row.csm||''};
+      }
+    }
+
     buildSel(data.generated_at);
     document.getElementById('dataAge').textContent='Data: '+(data.generated_date||'unknown')
       +(ALL_ARCHIVE.length ? ` · ${ALL_ARCHIVE.length} archived` : '');
@@ -733,6 +947,12 @@ async function init() {
       '<div class="empty"><div class="empty-icon">⚠️</div>Could not load data.json: '+e.message+'</div>';
   }
 }
+
+// Escape clears search; Cmd/Ctrl+K focuses it
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape' && document.getElementById('searchInput').value) { clearSearch(); }
+  if ((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+});
 
 init();
 </script>
