@@ -25,6 +25,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
 .kpi-val{font-size:30px;font-weight:700;}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.4;}
 .kpi.green .kpi-val{color:var(--green);}
 .kpi.red .kpi-val{color:var(--red);}
 .kpi.amber .kpi-val{color:var(--amber);}
@@ -196,12 +197,12 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
 
   <div class="kpi-row">
     <div class="kpi"><div class="kpi-label">Matched</div><div class="kpi-val" id="kTotal">—</div></div>
-    <div class="kpi green clickable" id="kpiOpen" onclick="openFilter('open')"><div class="kpi-label">Open ↗</div><div class="kpi-val" id="kOpen">—</div></div>
+    <div class="kpi green clickable" id="kpiOpen" onclick="openFilter('open')"><div class="kpi-label">Open ↗</div><div class="kpi-val" id="kOpen">—</div><div class="kpi-sub" id="kOpenSub"></div></div>
+    <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div><div class="kpi-sub" id="kPrioritySub"></div></div>
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
-    <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div></div>
-    <div class="kpi amber clickable" id="kpiNegative" onclick="openFilter('negative')"><div class="kpi-label">Negative ↗</div><div class="kpi-val" id="kNegative">—</div></div>
-    <div class="kpi clickable" id="kpiFeatureReq" style="border-color:var(--accent2)" onclick="openFilter('feature_request')"><div class="kpi-label" style="color:var(--accent2)">Feature Req ↗</div><div class="kpi-val" id="kFeatureReq" style="color:var(--accent2)">—</div></div>
-    <div class="kpi clickable" id="kpiStuck" style="border-color:#dc6b19" onclick="openFilter('stuck')"><div class="kpi-label" style="color:#dc6b19">Stuck 20d+ ↗</div><div class="kpi-val" id="kStuck" style="color:#dc6b19">—</div></div>
+    <div class="kpi amber clickable" id="kpiNegative" onclick="openFilter('negative')"><div class="kpi-label">Negative ↗</div><div class="kpi-val" id="kNegative">—</div><div class="kpi-sub" id="kNegativeSub"></div></div>
+    <div class="kpi clickable" id="kpiFeatureReq" style="border-color:var(--accent2)" onclick="openFilter('feature_request')"><div class="kpi-label" style="color:var(--accent2)">Feature Req ↗</div><div class="kpi-val" id="kFeatureReq" style="color:var(--accent2)">—</div><div class="kpi-sub" id="kFeatureReqSub"></div></div>
+    <div class="kpi clickable" id="kpiStuck" style="border-color:#dc6b19" onclick="openFilter('stuck')"><div class="kpi-label" style="color:#dc6b19">Stuck 20d+ ↗</div><div class="kpi-val" id="kStuck" style="color:#dc6b19">—</div><div class="kpi-sub" id="kStuckSub"></div></div>
   </div>
 
   <div class="filter-panel" id="filterPanel">
@@ -385,8 +386,17 @@ function buildCsmCard(csm, ts) {
   const meta = CSM_META[csm]||{initials:csm.slice(0,2).toUpperCase(),color:'#6b7280',short:csm};
   const o  = ts.filter(t=>t.state==='open').length;
   const cl = ts.filter(t=>['closed','submitted'].includes(t.state)).length;
-  const pr = ts.filter(t=>t.priority==='priority').length;
   const accs = new Set(ts.map(t=>t.account)).size;
+
+  // Average CX score
+  const cxScores = ts.map(t=>t.cx_score).filter(v=>v!=null&&v>0);
+  const avgCx    = cxScores.length ? (cxScores.reduce((s,v)=>s+v,0)/cxScores.length) : null;
+  let cxColor='var(--muted)', cxHtml='—';
+  if (avgCx!==null) {
+    cxColor = avgCx>=4?'var(--green)':avgCx>=3?'var(--amber)':'var(--red)';
+    cxHtml  = avgCx.toFixed(1);
+  }
+
   const card = document.createElement('div');
   card.className = 'csm-card'+(csm===activeCsm?' active':'');
   card.dataset.csm = csm;
@@ -395,13 +405,20 @@ function buildCsmCard(csm, ts) {
       <div class="avatar" style="background:${meta.color}">${meta.initials}</div>
       <div><div class="csm-name">${meta.short}</div><div class="csm-sub">${accs} account${accs!==1?'s':''}</div></div>
     </div>
-    <div class="csm-stats">
+    <div class="csm-stats" style="grid-template-columns:1fr 1fr 1fr 1fr;">
       <div><div class="cst-val" style="color:var(--text)">${ts.length}</div><div class="cst-lbl">Total</div></div>
       <div><div class="cst-val open">${o}</div><div class="cst-lbl">Open</div></div>
-      <div><div class="cst-val" style="color:var(--green)">${cl}</div><div class="cst-lbl">Achieved</div></div>
+      <div><div class="cst-val" style="color:var(--green)">${cl}</div><div class="cst-lbl">Archived</div></div>
+      <div><div class="cst-val" style="color:${cxColor};font-size:16px">${cxHtml}</div><div class="cst-lbl">Avg CX</div></div>
     </div>`;
   card.addEventListener('click', ()=>openCsm(csm,ts));
   return card;
+}
+
+function subStats(tix) {
+  const o = tix.filter(t=>t.state==='open').length;
+  const c = tix.filter(t=>!['open','snoozed'].includes(t.state||'')).length;
+  return `<span style="color:var(--green)">${o} open</span> · <span>${c} archived</span>`;
 }
 
 // ── RENDER HUB ────────────────────────────────────────────────────────────────
@@ -410,10 +427,28 @@ function renderHub(tix) {
   const closed   = tix.filter(t=>['closed','submitted'].includes(t.state)).length;
   const priority   = tix.filter(t=>t.priority==='priority').length;
   const negative   = tix.filter(isNegative).length;
-  const featureReq = tix.filter(t=>(t.ticket_type||'').toLowerCase()==='feature request').length;
-  const stuck = [...ALL_TICKETS,...ALL_ARCHIVE].filter(t=>t.state==='open'&&(t.days_open||0)>=20).length;
+
+  // Feature Req + Stuck: always all-time (live + archive)
+  const allTix       = [...ALL_TICKETS, ...ALL_ARCHIVE];
+  const frTix        = allTix.filter(t=>(t.ticket_type||'').toLowerCase()==='feature request');
+  const stuckTix     = allTix.filter(t=>t.state==='open'&&(t.days_open||0)>=20);
+  const featureReq   = frTix.length;
+  const stuck        = stuckTix.length;
+
   setK('kTotal',tix.length); setK('kOpen',open); setK('kClosed',closed);
   setK('kPriority',priority); setK('kNegative',negative); setK('kFeatureReq',featureReq); setK('kStuck',stuck);
+
+  // Sub-stats for clickable cards
+  const priorityTix = tix.filter(t=>t.priority==='priority');
+  const negativeTix = tix.filter(isNegative);
+  const openSub     = tix.filter(t=>t.state==='open');
+  const openClosed  = tix.filter(t=>!['open','snoozed'].includes(t.state||''));
+
+  document.getElementById('kOpenSub').innerHTML     = `<span>${openClosed.length} archived</span>`;
+  document.getElementById('kPrioritySub').innerHTML = subStats(priorityTix);
+  document.getElementById('kNegativeSub').innerHTML = subStats(negativeTix);
+  document.getElementById('kFeatureReqSub').innerHTML = subStats(frTix);
+  document.getElementById('kStuckSub').innerHTML    = `<span style="color:var(--muted)">${stuck} still open</span>`;
 
   const byCsm = {};
   for (const t of tix) (byCsm[t.csm]=byCsm[t.csm]||[]).push(t);
