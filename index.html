@@ -21,7 +21,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .banner.on{display:block;}
 
 /* ── KPI ROW ── */
-.kpi-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:24px;}
+.kpi-row{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:24px;}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
 .kpi-val{font-size:30px;font-weight:700;}
@@ -169,7 +169,7 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
 .search-results-banner{background:#f0f5ff;border:1px solid #c7d9ff;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--accent);font-weight:600;display:flex;align-items:center;justify-content:space-between;}
 .search-highlight{background:#fef9c3;border-radius:3px;padding:0 2px;}
 
-@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:1400px){.kpi-row{grid-template-columns:repeat(4,1fr);}}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr);}.csm-grid{grid-template-columns:1fr;}.main{padding:14px;}.search-input{width:160px;}.search-input:focus{width:200px;}}
 </style>
@@ -196,10 +196,11 @@ tr.tix-detail td{background:#fafafe;border-bottom:1px solid var(--border);paddin
   <div class="banner" id="banner"></div>
 
   <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Matched</div><div class="kpi-val" id="kTotal">—</div></div>
+    <div class="kpi"><div class="kpi-label">Period</div><div class="kpi-val" id="kTotal">—</div><div class="kpi-sub" id="kTotalSub"></div></div>
     <div class="kpi green clickable" id="kpiOpen" onclick="openFilter('open')"><div class="kpi-label">Open ↗</div><div class="kpi-val" id="kOpen">—</div><div class="kpi-sub" id="kOpenSub"></div></div>
-    <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div><div class="kpi-sub" id="kPrioritySub"></div></div>
     <div class="kpi muted"><div class="kpi-label">Closed</div><div class="kpi-val" id="kClosed">—</div></div>
+    <div class="kpi" style="border-color:var(--accent)"><div class="kpi-label" style="color:var(--accent)">Hub Total</div><div class="kpi-val" id="kHubTotal" style="color:var(--accent)">—</div><div class="kpi-sub" id="kHubTotalSub"></div></div>
+    <div class="kpi red clickable" id="kpiPriority" onclick="openFilter('priority')"><div class="kpi-label">Priority ↗</div><div class="kpi-val" id="kPriority">—</div><div class="kpi-sub" id="kPrioritySub"></div></div>
     <div class="kpi amber clickable" id="kpiNegative" onclick="openFilter('negative')"><div class="kpi-label">Negative ↗</div><div class="kpi-val" id="kNegative">—</div><div class="kpi-sub" id="kNegativeSub"></div></div>
     <div class="kpi clickable" id="kpiFeatureReq" style="border-color:var(--accent2)" onclick="openFilter('feature_request')"><div class="kpi-label" style="color:var(--accent2)">Feature Req ↗</div><div class="kpi-val" id="kFeatureReq" style="color:var(--accent2)">—</div><div class="kpi-sub" id="kFeatureReqSub"></div></div>
     <div class="kpi clickable" id="kpiStuck" style="border-color:#dc6b19" onclick="openFilter('stuck')"><div class="kpi-label" style="color:#dc6b19">Stuck 20d+ ↗</div><div class="kpi-val" id="kStuck" style="color:#dc6b19">—</div><div class="kpi-sub" id="kStuckSub"></div></div>
@@ -435,16 +436,23 @@ function renderHub(tix) {
   const featureReq   = frTix.length;
   const stuck        = stuckTix.length;
 
+  // Hub Total = all tickets across all time (live + archive)
+  const hubAllTix    = [...ALL_TICKETS, ...ALL_ARCHIVE];
+  const hubOpen      = hubAllTix.filter(t=>t.state==='open').length;
+  const hubArchived  = hubAllTix.filter(t=>t.state!=='open').length;
+
   setK('kTotal',tix.length); setK('kOpen',open); setK('kClosed',closed);
   setK('kPriority',priority); setK('kNegative',negative); setK('kFeatureReq',featureReq); setK('kStuck',stuck);
+  setK('kHubTotal', hubAllTix.length);
 
-  // Sub-stats for clickable cards
+  // Sub-stats
   const priorityTix = tix.filter(t=>t.priority==='priority');
   const negativeTix = tix.filter(isNegative);
-  const openSub     = tix.filter(t=>t.state==='open');
   const openClosed  = tix.filter(t=>!['open','snoozed'].includes(t.state||''));
 
-  document.getElementById('kOpenSub').innerHTML     = `<span>${openClosed.length} archived</span>`;
+  document.getElementById('kTotalSub').innerHTML    = `<span style="color:var(--green)">${open} open</span> · <span>${closed} closed</span>`;
+  document.getElementById('kOpenSub').innerHTML     = `<span>${openClosed.length} closed</span>`;
+  document.getElementById('kHubTotalSub').innerHTML = `<span style="color:var(--green)">${hubOpen} open</span> · <span>${hubArchived} closed</span>`;
   document.getElementById('kPrioritySub').innerHTML = subStats(priorityTix);
   document.getElementById('kNegativeSub').innerHTML = subStats(negativeTix);
   document.getElementById('kFeatureReqSub').innerHTML = subStats(frTix);
